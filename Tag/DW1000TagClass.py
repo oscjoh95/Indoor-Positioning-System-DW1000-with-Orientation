@@ -1,14 +1,11 @@
 """
-File description
+This file contains the class for the positioning tags. 
 """
 import DW1000
 import monotonic
 import DW1000Constants as C
 
 class DW1000Tag():
-    """
-    Class for the tags used for ranging
-    """
     def __init__(self, moduleName, irq, ss, antennaDelay, uniqueID, dataLen):
         """
         Initialize the module and print a status message
@@ -87,7 +84,6 @@ class DW1000Tag():
         self.noteActivity()
         print("Reset")
         self.transmitPoll()
-        self.transmitFinal()
 
     def transmitPoll(self):
         """
@@ -112,6 +108,9 @@ class DW1000Tag():
         print("Final Sent")
     
     def computeTimesAssymetric():
+        """
+        Computes the assymetric time from the aquired timestamps
+        """
         self.round1 = DW1000.wrapTimestamp(self.tsReceivedFinal - self.tsSentPollAck)
         self.reply1 = DW1000.wrapTimestamp(self.tsSentFinal - self.tsReceivedPollAck)
         self.round2 = DW1000.wrapTimestamp(self.tsReceivedFinalAck - self.tsSentFinal)
@@ -128,6 +127,7 @@ class DW1000Tag():
                 self.resetInactive()
             return
         
+        #On sent message
         if(self.sentAck):
             self.sentAck = False
             self.msgID = self.data[0]
@@ -135,6 +135,7 @@ class DW1000Tag():
                 self.tsSentFinal = DW1000.getTransmitTimestamp()
                 self.noteActivity()
         
+        #On received message
         if(self.receivedAck):
             self.receivedAck = False
             self.data = DW1000.getData(self.DATA_LEN)
