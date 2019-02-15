@@ -6,12 +6,13 @@ import monotonic
 import DW1000Constants as C
 
 class DW1000Tag():
-    def __init__(self, moduleName, irq, ss, antennaDelay, uniqueID, dataLen):
+    def __init__(self, moduleName, ss, irq, antennaDelay, uniqueID, dataLen, bus):
         """
         Initialize the module and print a status message
         """
         self.PIN_IRQ = irq
         self.PIN_SS = ss
+        self.DEFAULT_ANCHOR_ID = 0
         self.name = moduleName
         self.expectedMsgID = C.POLL_ACK
         self.lastActivity = 0
@@ -29,8 +30,9 @@ class DW1000Tag():
         self.computedTime = 0
         self.REPLY_DELAY_TIME_US = 7000
         self.distance = 0
+        self.currentAnchorID = self.DEFAULT_ANCHOR_ID
         
-        DW1000.begin(self.PIN_IRQ)
+        DW1000.begin(self.PIN_IRQ, bus)
         DW1000.setup(self.PIN_SS)
         print("DW1000 %s initialized" %self.name)
         print("############### ANCHOR ##############")
@@ -82,6 +84,7 @@ class DW1000Tag():
         self.expectedMsgID = C.POLL_ACK
         self.receiver()
         self.noteActivity()
+        self.currentAnchorID = self.DEFAULT_ANCHOR_ID
         print("Reset")
         self.transmitPoll()
 
@@ -91,7 +94,8 @@ class DW1000Tag():
         """
         DW1000.newTransmit()
         self.data[0] = C.POLL
-        DW1000.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
+        ts = DW1000.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
+        DW1000.setTimeStamp(self.data, ts, 1)
         DW1000.setData(self.data, self.DATA_LEN)
         DW1000.startTransmit()
         print("Poll sent")
@@ -102,12 +106,13 @@ class DW1000Tag():
         """
         DW1000.newTransmit()
         self.data[0] = C.FINAL
-        DW1000.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
+        ts = DW1000.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
+        DW1000.setTimeStamp(self.data, ts, 11)
         DW1000.setData(self.data, self.DATA_LEN)
         DW1000.startTransmit()
         print("Final Sent")
     
-    def computeTimesAssymetric():
+    def computeTimesAssymetric(self):
         """
         Computes the assymetric time from the aquired timestamps
         """
@@ -115,7 +120,7 @@ class DW1000Tag():
         self.reply1 = DW1000.wrapTimestamp(self.tsSentFinal - self.tsReceivedPollAck)
         self.round2 = DW1000.wrapTimestamp(self.tsReceivedFinalAck - self.tsSentFinal)
         self.reply2 = DW1000.wrapTimestamp(self.tsSentFinalAck - self.tsReceivedFinal)
-        self.computedTime = ((round1 * round2) - (reply1 * reply2)) / (round1 + round2 + reply1 + reply2)
+        self.computedTime = ((self.round1 * self.round2) - (self.reply1 * self.reply2)) / (self.round1 + self.round2 + self.reply1 + self.reply2)
         
     def loop(self):
         """
@@ -129,38 +134,40 @@ class DW1000Tag():
         
         #On sent message
         if(self.sentAck):
+            print("sent something")
             self.sentAck = False
             self.msgID = self.data[0]
             if(self.msgID == C.FINAL):
-                self.tsSentFinal = DW1000.getTransmitTimestamp()
                 self.noteActivity()
         
         #On received message
         if(self.receivedAck):
             self.receivedAck = False
             self.data = DW1000.getData(self.DATA_LEN)
-            msgID = data[0]
-            if(msgID != expectedMsgID):
+            self.msgID = self.data[0]
+            self.anchorID = self.data[16]
+            if((self.msgID != self.expectedMsgID)): #& (self.anchorID == self.currentAnchorID)):
                 print("WrongMsgID")
+                print(self.msgID)
                 self.protocolFailed = True
-            elif(self.msgID == C.POLL_ACK):
+            elif((self.msgID == C.POLL_ACK)): #& (self.anchorID == self.DEFAULT_ANCHOR_ID)):
+                print("Received Poll Ack")
                 self.protocolFailed = False
-                self.tsReceivedPollAck = DW1000.getReceiveTimestamp()
-                self.expectedMsgID = C.FINAL_ACK
+                DW1000.setTimeStamp(self.data, DW1000.getReceiveTimestamp(), 6)
+                self.expectedMsgID = C.RANGE_REPORT
+                print(self.data)
                 self.transmitFinal()
                 self.noteActivity()
-                print("Received Poll Ack")
-            elif(self.msgID == C.FINAL_ACK):
-                self.tsReceivedFinalAck = DW1000.getReceiveTimestamp()
-                self.expectedMsgID = C.POLL
-                self.noteActivity
-                print("Received Final Ack")
+            elif((self.msgID == C.RANGE_REPORT)): #& (self.anchorID == self.currentAnchorID)):
+                self.expectedMsgID = C.POLL_ACK
+                self.noteActivity()
+                print("Received Range Report")
                 if(self.protocolFailed == False):
-                    self.tsSentPollAck = DW1000.getTimestamp(self.data, 1)
-                    self.tsReceivedFinal = DW1000.getTimestamp(self.data, 6)
-                    self.tsSentFinalAck = DW1000.getTimestamp(self.data, 11)
-                    self.distance = (self.computeTimesAssymetric % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
+                    #self.computeTimesAssymetric()
+                    self.computedTime = DW1000.getTimeStamp(self.data,1)
+                    self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
                     print("Distance: %.2f m" %(self.distance))
+                    self.currentAnchorID = self.DEFAULT_ANCHOR_ID
                     return self.distance
                 else:
                     self.resetInactive()

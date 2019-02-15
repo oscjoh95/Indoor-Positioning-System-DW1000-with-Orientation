@@ -33,7 +33,7 @@ DW1000 general configuration.
 """
 
 
-def begin(irq):
+def begin(irq, bus):
     """
     This function opens the SPI connection available on the Raspberry Pi using the chip select #0. Normally, spidev can auto enable chip select when necessary. However, in our case, the dw1000's chip select is connected to GPIO16 so we have to enable/disable it manually.
     It also sets up the interrupt detection event on the rising edge of the interrupt pin.
@@ -45,11 +45,10 @@ def begin(irq):
     # Wait 5 us to open spi connection to let the chip enter idle state, see 2.3.2 of the DW1000 user manual (INIT).
     time.sleep(C.INIT_DELAY)
     GPIO.setmode(GPIO.BCM)
-    spi.open(0, 0)
+    spi.open(bus, 0)
     spi.max_speed_hz = 4000000
     _deviceMode = C.IDLE_MODE
     GPIO.setup(irq, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
     GPIO.add_event_detect(irq, GPIO.RISING, callback=handleInterrupt)
 
 def setup(ss):
