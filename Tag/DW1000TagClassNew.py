@@ -1,41 +1,39 @@
 """
-This file contains the class for the positioning tags. 
+This python script is used to configure the DW1000 chip as an anchor for ranging functionalities. It must be used in conjunction with the RangingTAG script.
+It requires the following modules: DW1000, DW1000Constants and monotonic.
 """
-import time
+
 import monotonic
+import time
 import math
 from random import randint
-import DW1000Constants as C
 import spidev
 import RPi.GPIO as GPIO
+import DW1000Constants as C
 
-class DW1000Tag():
-    def __init__(self, moduleName, ss, irq, antennaDelay, uniqueID, dataLen):
-        """
-        Initialize the module and print a status message
-        """
-        self.PIN_IRQ = irq
-        self.PIN_SS = ss
-        self.DEFAULT_ANCHOR_ID = 0
-        self.name = moduleName
-        self.expectedMsgID = C.POLL_ACK
+
+
+class DWM1000_ranging():
+    """Class for module ranging"""
+
+    def __init__(self, name, unique_id, cs, irq, antennaDelay):
+        self.name = name
         self.lastActivity = 0
+        self.expectedMsgId = C.POLL
+        self.protocolFailed = False
         self.sentAck = False
         self.receivedAck = False
-        self.protocolFailed = False
-        self.DATA_LEN = dataLen
-        self.data = [0] * self.DATA_LEN
-        self.tsSentPollAck = 0
-        self.tsReceivedPollAck = 0
-        self.tsSentFinal = 0
-        self.tsReceivedFinal = 0
-        self.tsSentFinalAck = 0
-        self.tsReceivedFinalAck = 0
-        self.computedTime = 0
+        self.LEN_DATA = 16
+        self.data = [0] * self.LEN_DATA
+        self.timePollAckSentTS = 0
+        self.timePollAckReceivedTS = 0
+        self.timePollReceivedTS = 0
+        self.timeRangeReceivedTS = 0
+        self.timePollSentTS = 0
+        self.timeRangeSentTS = 0
+        self.timeComputedRangeTS = 0
         self.REPLY_DELAY_TIME_US = 7000
-        self.distance = 0
-        self.currentAnchorID = self.DEFAULT_ANCHOR_ID
-    
+
         # from DW1000
         self.spi = spidev.SpiDev()
         self._chipSelect = None
@@ -51,16 +49,24 @@ class DW1000Tag():
         self._txfctrl = [0] * 5
         self._sysstatus = [0] * 5
         GPIO.setwarnings(False)
-
+        self.PIN_IRQ = irq
+        self.PIN_SS = cs
+        self.antennaDelay = antennaDelay
         self.begin(self.PIN_IRQ)
         self.setup(self.PIN_SS)
+
         print("DW1000 %s initialized" %self.name)
         print("############### ANCHOR ##############")
-        self.generalConfiguration(uniqueID, C.MODE_LONGDATA_RANGE_ACCURACY)
+        #82:17:5B:D5:A9:9A:E2:9C
+        #test1 = [None] * 4
+        #self.readBytes(0x1A, 0x00, test1, 4)
+        #self.setBit(test1, 4, 12, True)
+        #self.writeBytes(0x1A, 0x00, test1, 4)
+        self.generalConfiguration(unique_id, C.MODE_LONGDATA_RANGE_ACCURACY)#C.MODE_LONGDATA_RANGE_ACCURACY
         self.registerCallback("handleSent", self.handleSent)
         self.registerCallback("handleReceived", self.handleReceived)
-        self.setAntennaDelay(antennaDelay)
-        
+        self.setAntennaDelay(self.antennaDelay)
+        #print(test1)
         self.receiver()
         self.noteActivity()
 
@@ -122,15 +128,15 @@ class DW1000Tag():
         Callback invoked on the rising edge of the interrupt pin. Handle the configured interruptions.
         """
 
-        print("\nInterrupt!")
+        #print("\nInterrupt!")
         self.readBytes(C.SYS_STATUS, C.NO_SUB, self._sysstatus, 5)
-        print(self._sysstatus)
+        # print(_sysstatus)
         self.msgReceived = self.getBit(self._sysstatus, 5, C.RXFCG_BIT)
         self.receiveTimeStampAvailable = self.getBit(self._sysstatus, 5, C.LDEDONE_BIT)
         self.transmitDone = self.getBit(self._sysstatus, 5, C.TXFRS_BIT)
         if self.transmitDone:
             self.callbacks["handleSent"]()
-            #print('Handle sent')
+            print('Handle sent')
             self.clearTransmitStatus()
         if self.receiveTimeStampAvailable:
             self.setBit(self._sysstatus, 5, C.LDEDONE_BIT, True)
@@ -309,7 +315,7 @@ class DW1000Tag():
         self._operationMode[C.PREAMBLE_LENGTH_BIT] = self.prealen
 
         # setChannel
-        self.setChannel(C.CHANNEL_5)
+        self.setChannel(C.CHANNEL_4)
 
         # setPreambleCode
         if mode[1] == C.TX_PULSE_FREQ_16MHZ:
@@ -961,7 +967,7 @@ class DW1000Tag():
         """
         This function calculates an estimate of the receive power level. See section 4.7.2 of the DW1000 user manual for further details on the calculation.
 
-       Returns:
+        Returns:
                 The estimated receive power for the current reception.
         """
         cirPwrBytes = [None] * 2
@@ -1549,50 +1555,58 @@ class DW1000Tag():
         self.spi.close()
         GPIO.cleanup()
         print("\n Close SPI")
-    
+
+##################################  END OF DISASTER  ############################
+
+    def printa(self):
+        print(_test)
+
     def millis(self):
         """
         This function returns the value (in milliseconds) of a clock which never goes backwards. It detects the inactivity of the chip and
         is used to avoid having the chip stuck in an undesirable state.
         """
-        return int(round(monotonic.monotonic() * C.MILLISECONDS))    
-    
-    def noteActivity(self):
-        """
-        Updates the last time the device was active
-        """
-        self.lastActivity = self.millis()
-    
+        return int(round(monotonic.monotonic() * C.MILLISECONDS))
+
+
     def handleSent(self):
         """
-        Callback for message sent. Sets the sentAck variable true to take action in the loop
+        This is a callback called from the module's interrupt handler when a transmission was successful.
+        It sets the sentAck variable as True so the loop can continue.
         """
+        #self.sentAck
         self.sentAck = True
-        
+        #print("sentAck True")
+
+
     def handleReceived(self):
         """
-        Callback for message received. Sets the receivedAck variable true to take action in the loop
-        """        
+        This is a callback called from the module's interrupt handler when a reception was successful.
+        It sets the received receivedAck as True so the loop can continue.
+        """
+        #self.receivedAck
         self.receivedAck = True
-    
-    def receiver(self):
+        #print("receivedAck True")
+
+
+    def noteActivity(self):
         """
-        This function prepares the module to receive messages
+        This function records the time of the last activity so we can know if the device is inactive or not.
         """
-        self.newReceive()
-        self.receivePermanently()
-        self.startReceive()
+        #self.lastActivity
+        self.lastActivity = self.millis()
+
 
     def resetInactive(self):
         """
-        Resets the module and transmits a new poll
+        This function restarts the default polling operation when the device is deemed inactive.
         """
-        self.expectedMsgID = C.POLL_ACK
+        #self.expectedMsgId
+        print("reset inactive")
+        self.expectedMsgId = C.POLL
         self.receiver()
         self.noteActivity()
-        self.currentAnchorID = self.DEFAULT_ANCHOR_ID
-        print("Reset")
-        self.transmitPoll()
+        #self.transmitPoll()
 
     def transmitPoll(self):
         """
@@ -1602,79 +1616,160 @@ class DW1000Tag():
         self.data[0] = C.POLL
         ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
         self.setTimeStamp(self.data, ts, 1)
-        self.setData(self.data, self.DATA_LEN)
+        self.setData(self.data, self.LEN_DATA)
         self.startTransmit()
         print("Poll sent")
-       
-    def transmitFinal(self):
+
+    def transmitPollAck(self):
         """
-        Function to transmit the FINAL message
+        This function sends the polling acknowledge message which is used to confirm the reception of the polling message.
         """
+        #self.data
         self.newTransmit()
-        self.data[0] = C.FINAL
-        ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
-        self.setTimeStamp(self.data, ts, 11)
-        self.setData(self.data, self.DATA_LEN)
+        self.data[0] = C.POLL_ACK
+        self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)
+        self.setData(self.data, self.LEN_DATA)
         self.startTransmit()
-        print("Final Sent")
-    
-    def computeTimesAssymetric(self):
+
+
+    def transmitRangeAcknowledge(self):
         """
-        Computes the assymetric time from the aquired timestamps
+        This functions sends the range acknowledge message which tells the tag that the ranging function was successful and another ranging transmission can begin.
         """
-        self.round1 = self.wrapTimestamp(self.tsReceivedFinal - self.tsSentPollAck)
-        self.reply1 = self.wrapTimestamp(self.tsSentFinal - self.tsReceivedPollAck)
-        self.round2 = self.wrapTimestamp(self.tsReceivedFinalAck - self.tsSentFinal)
-        self.reply2 = self.wrapTimestamp(self.tsSentFinalAck - self.tsReceivedFinal)
-        self.computedTime = ((self.round1 * self.round2) - (self.reply1 * self.reply2)) / (self.round1 + self.round2 + self.reply1 + self.reply2)
-    
-        
+        #global self.data
+        self.newTransmit()
+        self.data[0] = C.RANGE_REPORT
+        self.setData(self.data, self.LEN_DATA)
+        self.startTransmit()
+
+
+    def transmitRangeFailed(self):
+        """
+        This functions sends the range failed message which tells the tag that the ranging function has failed and to start another ranging transmission.
+        """
+        #global self.data
+        self.newTransmit()
+        self.data[0] = C.RANGE_FAILED
+        self.setData(self.data, self.LEN_DATA)
+        self.startTransmit()
+
+
+    def receiver(self):
+        """
+        This function configures the chip to prepare for a message reception.
+        """
+        #global self.data
+        self.newReceive()
+        self.receivePermanently()
+        self.startReceive()
+
+
+    def computeRangeAsymmetric(self):
+        """
+        This is the function which calculates the timestamp used to determine the range between the devices.
+        """
+        #global self.timeComputedRangeTS
+        self.round1 = self.wrapTimestamp(self.timePollAckReceivedTS - self.timePollSentTS)
+        self.reply1 = self.wrapTimestamp(self.timePollAckSentTS - self.timePollReceivedTS)
+        self.round2 = self.wrapTimestamp(self.timeRangeReceivedTS - self.timePollAckSentTS)
+        self.reply2 = self.wrapTimestamp(self.timeRangeSentTS - self.timePollAckReceivedTS)
+        self.timeComputedRangeTS = (self.round1 * self.round2 - self.reply1 * self.reply2) / (self.round1 + self.round2 + self.reply1 + self.reply2)
+
+    def ExitModule(self):
+        GPIO.cleanup()
+
+
+        #super(, self).__init__()
+        #self.arg = arg
+
+
+
+
+
+
+
+
+
+
+
     def loop(self):
-        """
-        The main loop of the class that handles the watchdog timer and interrupts from sent and received packets
-        """
-        #Watchdog check
-        if(self.sentAck == False and self.receivedAck == False):
-            if((self.millis() - self.lastActivity > C.RESET_PERIOD)):
+        #global self.sentAck, self.receivedAck, self.timePollAckSentTS, self.timePollReceivedTS, self.timePollSentTS, self.timePollAckReceivedTS, self.timeRangeReceivedTS, self.protocolFailed, self.data, self.expectedMsgId, self.timeRangeSentTS
+        #current_time = millis()
+        #GPIO.output(_chipSelect, GPIO.HIGH)
+        #if self._permanentReceive == False:
+
+
+        if (self.sentAck == False and self.receivedAck == False):
+            if ((self.millis() - self.lastActivity) > C.RESET_PERIOD):
                 self.resetInactive()
             return
-        
-        #On sent message
-        if(self.sentAck):
-            #print("sent something")
+
+        if self.sentAck:
+            print('sentack')
             self.sentAck = False
-            self.msgID = self.data[0]
-            if(self.msgID == C.FINAL):
+            self.msgId = self.data[0]
+            if self.msgId == C.POLL_ACK:
+                self.timePollAckSentTS = self.getTransmitTimestamp()
                 self.noteActivity()
-        
-        #On received message
-        if(self.receivedAck):
-            #print("Received Something")
+
+        if self.receivedAck:
+            #print('receivedack')
             self.receivedAck = False
-            self.data = self.getData(self.DATA_LEN)
-            self.msgID = self.data[0]
-            self.anchorID = self.data[16]
-            if((self.msgID != self.expectedMsgID)): #& (self.anchorID == self.currentAnchorID)):
-                print("WrongMsgID")
-                print(self.msgID)
+            self.data = self.getData(self.LEN_DATA)
+            #data.reverse()
+            #print('Data vector is: ')
+            #print(self.data)
+            self.msgId = self.data[0]
+            #print('Message id is: ')
+            #print(msgId)
+            if self.msgId != self.expectedMsgId:
+                #print('protocolFailed')
                 self.protocolFailed = True
-            elif((self.msgID == C.POLL_ACK)): #& (self.anchorID == self.DEFAULT_ANCHOR_ID)):
-                print("Received Poll Ack")
+            if self.msgId == C.POLL:
                 self.protocolFailed = False
-                self.setTimeStamp(self.data, self.getReceiveTimestamp(), 6)
-                self.expectedMsgID = C.RANGE_REPORT
-                self.transmitFinal()
+                self.timePollReceivedTS = self.getReceiveTimestamp()
+                self.expectedMsgId = C.RANGE
+                self.transmitPollAck()
                 self.noteActivity()
-            elif((self.msgID == C.RANGE_REPORT)): #& (self.anchorID == self.currentAnchorID)):
-                self.expectedMsgID = C.POLL_ACK
-                self.noteActivity()
-                print("Received Range Report")
-                if(self.protocolFailed == False):
-                    #self.computeTimesAssymetric()
-                    self.computedTime = self.getTimeStamp(self.data,1)
-                    self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
-                    print("Distance: %.2f m" %(self.distance))
-                    self.currentAnchorID = self.DEFAULT_ANCHOR_ID
+                #print('POLL')
+            elif self.msgId == C.RANGE:
+                self.timeRangeReceivedTS = self.getReceiveTimestamp()
+                self.expectedMsgId = C.POLL
+                #print('msgId = Range')
+                if self.protocolFailed == False:
+                    self.timePollSentTS = self.getTimeStamp(self.data, 1)
+                    self.timePollAckReceivedTS = self.getTimeStamp(self.data, 6)
+                    self.timeRangeSentTS = self.getTimeStamp(self.data, 11)
+                    self.computeRangeAsymmetric()
+                    self.transmitRangeAcknowledge()
+                    self.distance = (self.timeComputedRangeTS % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
+                    #print("Distance: %.2f m" %(self.distance))
+                    #test
+                    #self.NotreceivePermanently()
+                    #self._deviceMode = C.IDLE_MODE
                     return self.distance
+                    #Sample rate
+
+
+                    #if millis() - rangingCountPeriod > 1000:
+                    #    samplingRate = (1000.0 * successRangingCount) / (millis() - rangingCountPeriod)
+                    #    rangingCountPeriod = millis()
+                    #    successRangingCount = 0
+
                 else:
-                    self.resetInactive()
+                    self.transmitRangeFailed()
+
+                self.noteActivity()
+
+                #samplingRate = current_time - lastsampletime
+                #lastsampletime = samplingRate
+                #print(samplingRate)
+
+
+
+    #while 1:
+    #    print('no loop?')
+    #    self.loop()
+
+#except KeyboardInterrupt:
+#    self.close()
