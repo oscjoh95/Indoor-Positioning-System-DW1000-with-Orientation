@@ -121,9 +121,9 @@ class DW1000Tag():
         Callback invoked on the rising edge of the interrupt pin. Handle the configured interruptions.
         """
 
-        print("\nInterrupt!")
+        #print("\nInterrupt!")
         self.readBytes(C.SYS_STATUS, C.NO_SUB, self._sysstatus, 5)
-        print(self._sysstatus)
+        #print(self._sysstatus)
         self.msgReceived = self.getBit(self._sysstatus, 5, C.RXFCG_BIT)
         self.receiveTimeStampAvailable = self.getBit(self._sysstatus, 5, C.LDEDONE_BIT)
         self.transmitDone = self.getBit(self._sysstatus, 5, C.TXFRS_BIT)
