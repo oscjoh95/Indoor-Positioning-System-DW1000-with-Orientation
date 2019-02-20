@@ -16,7 +16,6 @@ class DW1000Tag():
         """
         self.PIN_IRQ = irq
         self.PIN_SS = ss
-        self.DEFAULT_ANCHOR_ID = 0
         self.name = moduleName
         self.expectedMsgID = C.POLL_ACK
         self.lastActivity = 0
@@ -34,7 +33,7 @@ class DW1000Tag():
         self.computedTime = 0
         self.REPLY_DELAY_TIME_US = 7000
         self.distance = 0
-        self.currentAnchorID = self.DEFAULT_ANCHOR_ID
+        self.currentAnchorID = 0
     
         # from DW1000
         self.spi = spidev.SpiDev()
@@ -1590,7 +1589,6 @@ class DW1000Tag():
         self.expectedMsgID = C.POLL_ACK
         self.receiver()
         self.noteActivity()
-        self.currentAnchorID = self.DEFAULT_ANCHOR_ID
         print("Reset")
         self.transmitPoll()
 
@@ -1628,7 +1626,9 @@ class DW1000Tag():
         self.reply2 = self.wrapTimestamp(self.tsSentFinalAck - self.tsReceivedFinal)
         self.computedTime = ((self.round1 * self.round2) - (self.reply1 * self.reply2)) / (self.round1 + self.round2 + self.reply1 + self.reply2)
     
-        
+    def getCurrentAnchorID(self):
+        return self.currentAnchorID
+    
     def loop(self):
         """
         The main loop of the class that handles the watchdog timer and interrupts from sent and received packets
@@ -1637,7 +1637,7 @@ class DW1000Tag():
         if(self.sentAck == False and self.receivedAck == False):
             if((self.millis() - self.lastActivity > C.RESET_PERIOD)):
                 self.resetInactive()
-            return
+            return 
         
         #On sent message
         if(self.sentAck):
@@ -1653,7 +1653,7 @@ class DW1000Tag():
             self.receivedAck = False
             self.data = self.getData(self.DATA_LEN)
             self.msgID = self.data[0]
-            self.anchorID = self.data[16]
+            self.currentAnchorID = self.data[16]
             if((self.msgID != self.expectedMsgID)): #& (self.anchorID == self.currentAnchorID)):
                 print("WrongMsgID")
                 print(self.msgID)
@@ -1670,11 +1670,9 @@ class DW1000Tag():
                 self.noteActivity()
                 print("Received Range Report")
                 if(self.protocolFailed == False):
-                    #self.computeTimesAssymetric()
-                    self.computedTime = self.getTimeStamp(self.data,1)
+                    self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is saved at position 1
                     self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
                     print("Distance: %.2f m" %(self.distance))
-                    self.currentAnchorID = self.DEFAULT_ANCHOR_ID
                     return self.distance
                 else:
                     self.resetInactive()
