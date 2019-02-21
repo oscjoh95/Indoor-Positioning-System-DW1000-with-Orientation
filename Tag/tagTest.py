@@ -1,7 +1,7 @@
 """
 Main file for the tags that are controlled by a raspberry pi. It alternates sampling between the two
 tags to keep the distances up to date.
-Anchors should be placed in the plane z=0 
+Anchors should be placed in the plane z=0, either in the ceiling or on floor level
 """
 import DW1000Constants as C
 from DW1000TagClass import *
@@ -9,6 +9,7 @@ import time
 import RPi.GPIO as GPIO
 from Kalman import *
 from math import *
+import monotonic
 
 CS1 = 12
 CS2 = 5
@@ -16,7 +17,7 @@ IRQ1 = 6
 IRQ2 = 26
 ANTENNA_DELAY1 = 16317
 ANTENNA_DELAY2 = 16317
-startupTime = 1
+startupTime = 1.5
 DATA_LEN = 17
 data = [0] * 5
 d1 = [0] * 3
@@ -24,8 +25,12 @@ d2 = [0] * 3
 ANCHOR1 = (0,0)  #Adjust when anchors placed
 ANCHOR2 = (10,0) #Adjust when anchors placed
 ANCHOR3 = (5,10) #Adjust when anchors placed
-ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1 
+ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
+SAMPLING_TIME = 500 # Approx. divided by 50 to get ms
+samplingStartTime = 0
+FILTER_CHOICE = 0 #Kalman = 0
 
+"""
 #Debugging
 x = 7
 y = 5
@@ -40,7 +45,7 @@ else:
 y3 = 10 - y
 d1[2] = sqrt(x3*x3 + y3*y3 + z*z)
 #End Debugging
-
+"""
 module1 = DW1000Tag("module1", CS1, IRQ1, ANTENNA_DELAY1, "82:17:5B:D5:A9:9A:E2:1A", DATA_LEN)
 module1.idle()
 print("\n")
@@ -59,13 +64,13 @@ def loop():
     print("-----Module 1-----")
     range = None
     anchorID = None
-    i = 0
-    while((i < 20000)):
-        i += 1
+    samplingStartTime = millis()
+    while((millis() - samplingStartTime) < SAMPLING_TIME):
         range = module1.loop()
         anchorID = module1.getCurrentAnchorID()
         if(range != None):
            d1[anchorID] = range
+           print(anchorID)
            range = None
            anchorID = None
     module1.idle()
@@ -76,9 +81,8 @@ def loop():
     print("-----Module 2-----")
     range = None
     anchorID = None
-    i = 0
-    while(range == None):#(i < 20000)):
-        i += 1
+    samplingStartTime = millis()
+    while((millis() - samplingStartTime) < SAMPLING_TIME):
         range = module2.loop()
         anchorID = module2.getCurrentAnchorID()
         if(range != None):
@@ -90,15 +94,18 @@ def loop():
     time.sleep(1) #Remove later
     
     #Calculate position measurements
+    print("-----Position Calculations-----")
     pos1 = calculatePosition(d1)
     pos2 = calculatePosition(d2)
     print(pos1)
     print(pos2)
-    #Kalman filtering
-    #posFiltered1 = kalman1.filter(pos1)
-    #posFiltered2 = kalman2.filter(pos2)
-    #print(posFiltered1)
-    #print(posFiltered2)
+    
+    #Filtering
+    #if(FILTER_CHOICE == 0): #Kalman
+        #posFiltered1 = kalman1.filter(pos1)
+        #posFiltered2 = kalman2.filter(pos2)
+        #print(posFiltered1)
+        #print(posFiltered2)
     
 def calculatePosition(values):
     """
@@ -122,6 +129,12 @@ def calculatePosition(values):
         
     position = Px,Py,Pz
     return position
+
+def millis():
+    """
+    This function returns the value (in milliseconds) of a clock which never goes backwards.
+    """
+    return int(round(monotonic.monotonic() * C.MILLISECONDS))
     
 def main():
     try:

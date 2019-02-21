@@ -77,7 +77,7 @@ class DW1000Tag():
         time.sleep(C.INIT_DELAY)
         GPIO.setmode(GPIO.BCM) #Move out
         self.spi.open(0, 0)         #Move out
-        self.spi.max_speed_hz = 4000000 #Move out
+        self.spi.max_speed_hz = 2000000 #Move out
         self._deviceMode = C.IDLE_MODE
         GPIO.setup(irq, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -1586,7 +1586,7 @@ class DW1000Tag():
         """
         Resets the module and transmits a new poll
         """
-        self.expectedMsgID = C.POLL_ACK
+        #self.expectedMsgID = C.POLL_ACK
         self.receiver()
         self.noteActivity()
         print("Reset")
@@ -1653,26 +1653,26 @@ class DW1000Tag():
             self.receivedAck = False
             self.data = self.getData(self.DATA_LEN)
             self.msgID = self.data[0]
-            self.currentAnchorID = self.data[16]
-            if((self.msgID != self.expectedMsgID)): #& (self.anchorID == self.currentAnchorID)):
-                print("WrongMsgID")
-                print(self.msgID)
-                self.protocolFailed = True
-            elif((self.msgID == C.POLL_ACK)): #& (self.anchorID == self.DEFAULT_ANCHOR_ID)):
+            #if((self.msgID != self.expectedMsgID)): #& (self.anchorID == self.currentAnchorID)):
+                #print("WrongMsgID")
+                #print(self.msgID)
+                #self.protocolFailed = True
+            if(self.msgID == C.POLL_ACK): #& (self.anchorID == self.DEFAULT_ANCHOR_ID)):
                 print("Received Poll Ack")
-                self.protocolFailed = False
+                #self.protocolFailed = False
                 self.setTimeStamp(self.data, self.getReceiveTimestamp(), 6)
-                self.expectedMsgID = C.RANGE_REPORT
+                #self.expectedMsgID = C.RANGE_REPORT
                 self.transmitFinal()
                 self.noteActivity()
-            elif((self.msgID == C.RANGE_REPORT)): #& (self.anchorID == self.currentAnchorID)):
-                self.expectedMsgID = C.POLL_ACK
+            elif(self.msgID == C.RANGE_REPORT): #& (self.anchorID == self.currentAnchorID)):
+                #self.expectedMsgID = C.POLL_ACK
                 self.noteActivity()
-                print("Received Range Report")
-                if(self.protocolFailed == False):
-                    self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is saved at position 1
-                    self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
-                    print("Distance: %.2f m" %(self.distance))
-                    return self.distance
-                else:
-                    self.resetInactive()
+                print("Received Range Report")              
+                self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is saved at position 1
+                self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
+                print("Distance: %.2f m" %(self.distance))
+                self.currentAnchorID = self.data[16]
+                print(self.data)
+                return self.distance
+            else:
+                self.resetInactive()
