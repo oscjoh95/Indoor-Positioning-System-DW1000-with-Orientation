@@ -1,10 +1,10 @@
 
 #include <SPI.h>
 #include <DW1000.h>
-
+#include <EEPROM.h>
 
 #define DATA_LENGTH 17
-#define DEVICE_ID 255
+#define DEVICE_ID 0
 
 #define POLL 0
 #define POLL_ACK 1
@@ -17,7 +17,7 @@ const uint8_t PIN_RST = 9; // reset pin
 const uint8_t PIN_IRQ = 2; // irq pin
 const uint8_t PIN_SS = SS; // spi select pin
 
-volatile byte expectedMsgId = POLL_ACK;
+volatile byte expectedMsgId = POLL;
 volatile byte recMsgId;   //Received message ID
 volatile byte recDevId;   //Received Device ID
 volatile byte sentMsgId;  //Sent Message ID
@@ -31,22 +31,35 @@ volatile boolean recAck = false;
 
 // Timestamps for range calculations
 DW1000Time tsSentPoll;
+DW1000Time tsReceivedPoll;
+DW1000Time tsSentPollAck;
 DW1000Time tsReceivedPollAck;
 DW1000Time tsSentFinal;
+DW1000Time tsReceivedFinal;
+
+DW1000Time computedTof;
+
 
 byte data[DATA_LENGTH];     //Data to Send
 byte recData[DATA_LENGTH];  //Received Data
 
 uint32_t lastActivity;        //Last noted activity
-uint32_t resetPeriod = 1000;  //Watchdog Reset Timer
-uint16_t delayTimeUS = 7000;  //Delay to transmit on tsSentFinalAck
+uint32_t resetPeriod = 1000;   //Watchdog Reset Timer
+uint16_t delayTimeUS = 5000;  //Delay to transmit on tsSentFinalAck
+uint8_t deviceID = DEVICE_ID;
 
 DW1000Time delayTransmit = DW1000Time(delayTimeUS, DW1000Time::MICROSECONDS);
 
 void setup() {
     Serial.begin(115200);//Baud Rate
-    Serial.println(F("Tag Starting..."));
+    Serial.println(F("Anchor Starting..."));
 
+    //EEPROM.write(1,2); //Store Device ID in EEPROM: Comment after Device ID is stored
+    deviceID = EEPROM.read(1);
+    Serial.print("Anchor ID: ");Serial.println(deviceID);
+    //ANTENNA_DELAY = readAntennaDelay = (((0xFFFF & EEPROM.read(2))<<8) | EEPROM.read(3)); //Read Calibrated ANTENNA_DELAY FROM EEPROM
+    Serial.print("Antenna Delay: ");Serial.println(ANTENNA_DELAY);
+    
     //Setup Output Pins Arduino Pro Mini
     DW1000.begin(PIN_IRQ, PIN_RST);
     DW1000.select(PIN_SS);
@@ -74,10 +87,9 @@ void setup() {
     DW1000.attachReceivedHandler(handleReceived);
     delay(1000);
     receiver();
-    Serial.println(F("Tag Initialized: Polling..."));
+    Serial.println(F("Anchor Initialized: Waiting for poll..."));
     noteActivity();
-    transmitPoll();
-}    
+}
 
 void receiver() {
     DW1000.newReceive();
@@ -86,29 +98,28 @@ void receiver() {
     DW1000.startReceive();
 }
 
-void transmitPoll() {
+void transmitPollAck() {
     DW1000.newTransmit();
     DW1000.setDefaults();
-    data[0] = POLL;
-    data[17] = DEVICE_ID;
-    tsSentPoll = DW1000.setDelay(delayTransmit);
-    tsSentPoll.getTimestamp(data + 1);
+    data[0] = POLL_ACK;
+    data[16] = deviceID;
+    //DW1000Time randomDelayTransmit = DW1000Time(5000, DW1000Time::MICROSECONDS); //Not Random Anymore
+    tsSentPollAck = DW1000.setDelay(delayTransmit);
     DW1000.setData(data, DATA_LENGTH);
     DW1000.startTransmit();
-    sentMsgId = POLL;
+    sentMsgId = POLL_ACK;
 }
 
-void transmitFinal() {
+void transmitRangeReport() {
     DW1000.newTransmit();
     DW1000.setDefaults();
-    data[0] = FINAL;
-    data[17] = DEVICE_ID;
-    tsSentFinal = DW1000.setDelay(delayTransmit);
-    tsReceivedPollAck.getTimestamp(data + 6);
-    tsSentFinal.getTimestamp(data + 11);
+    data[0] = RANGE_REPORT;
+    data[16] = deviceID;
+    DW1000.setDelay(delayTransmit);
+    computedTof.getTimestamp(data + 1);
     DW1000.setData(data, DATA_LENGTH);
     DW1000.startTransmit();
-    sentMsgId = FINAL;
+    sentMsgId = RANGE_REPORT;
 }
 
 
@@ -130,10 +141,20 @@ void noteActivity() {
  
 // Reset to Original State
 void resetInactive() {
-    expectedMsgId = POLL_ACK;
+    expectedMsgId = POLL;
     receiver();
-    noteActivity(); 
-    transmitPoll();
+    noteActivity();  
+}
+
+void computeRangeAssymetric() {
+       DW1000Time round1 = (tsReceivedPollAck - tsSentPoll).wrap();
+       DW1000Time reply1 = (tsSentPollAck - tsReceivedPoll).wrap();
+       DW1000Time round2 = (tsReceivedFinal - tsSentPollAck).wrap();
+       DW1000Time reply2 = (tsSentFinal - tsReceivedPollAck).wrap();
+       
+       DW1000Time assymetricTime = ((round1 * round2) - (reply1 * reply2)) / (round1 + round2 + reply1 + reply2);
+       computedTof.setTimestamp(assymetricTime);
+       Serial.print("Range: "); Serial.println(computedTof.getAsMeters());
 }
 
 
@@ -155,13 +176,19 @@ void loop() {
         recMsgId = recData[0];
         recDevId = recData[17];
         if((recMsgId == expectedMsgId)){
-            if(recMsgId == POLL_ACK){                 //Received POLL_ACK
-                DW1000.getReceiveTimestamp(tsReceivedPollAck);
-                Serial.println("Received POLL_ACK");
-                transmitFinal();
-            }else if(recMsgId == RANGE_REPORT) {       //Received RANGE_REPORT
-                Serial.println("Received RANGE_REPORT");
-                expectedMsgId = 255;
+            if(recMsgId == POLL){     //Received POLL
+                DW1000.getReceiveTimestamp(tsReceivedPoll);
+                tsSentPoll.setTimestamp(recData+1);
+                Serial.println("Received POLL");
+                delay(50*deviceID);
+                transmitPollAck();
+            }else if(recMsgId == FINAL){                    //Received FINAL
+                DW1000.getReceiveTimestamp(tsReceivedFinal);
+                Serial.println("Received FINAL");
+                tsReceivedPollAck.setTimestamp(recData+6);
+                tsSentFinal.setTimestamp(recData+11);
+                computeRangeAssymetric();
+                transmitRangeReport();
             }
             noteActivity();           //Update Watchdog
         }
@@ -170,13 +197,13 @@ void loop() {
     //Sent Package
     if(sentAck){
         sentAck=false;
-        if(sentMsgId == POLL){
-            expectedMsgId = POLL_ACK;
-            Serial.println("Sent POLL");
+        if(sentMsgId == POLL_ACK){
+            expectedMsgId = FINAL;
+            Serial.println("Sent POLL_ACK");
         }
-        else if(sentMsgId == FINAL){
-            expectedMsgId = RANGE_REPORT;      
-            Serial.println("Sent FINAL");            
+        else if(sentMsgId == RANGE_REPORT){
+            expectedMsgId = POLL;      
+            Serial.println("Sent RANGE_REPORT");            
         }
     }
 }
