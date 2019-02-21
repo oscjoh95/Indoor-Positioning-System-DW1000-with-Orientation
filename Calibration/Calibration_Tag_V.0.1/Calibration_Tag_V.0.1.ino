@@ -4,10 +4,11 @@
 
 
 #define DATA_LENGTH 17
-#define DEVICE_ID 1
+#define DEVICE_ID 255
 
 #define POLL 0
 #define POLL_ACK 1
+#define RANGE_REPORT 3
 #define FINAL 5
 #define FINAL_ACK 6
 
@@ -16,34 +17,35 @@ const uint8_t PIN_RST = 9; // reset pin
 const uint8_t PIN_IRQ = 2; // irq pin
 const uint8_t PIN_SS = SS; // spi select pin
 
-volatile byte expectedMsgId = POLL;
-volatile byte recMsgId;
-volatile byte sentMsgId;
+volatile byte expectedMsgId = POLL_ACK;
+volatile byte recMsgId;   //Received message ID
+volatile byte recDevId;   //Received Device ID
+volatile byte sentMsgId;  //Sent Message ID
 
 //Calibration of antenna
-const uint32_t ANTENNA_DELAY = 16470;//16470
+const uint32_t ANTENNA_DELAY = 16470;//Delay to calibrate antenna. Typ. 16470
 
 //Received Interrupts
 volatile boolean sentAck = false;
 volatile boolean recAck = false;
 
-// Timestamps
-DW1000Time tsPollAckSent;
-DW1000Time tsFinalReceived;
-DW1000Time tsFinalAckSent;
-
-
+// Timestamps for range calculations
+DW1000Time tsSentPoll;
+DW1000Time tsReceivedPollAck;
+DW1000Time tsSentFinal;
 
 byte data[DATA_LENGTH];     //Data to Send
 byte recData[DATA_LENGTH];  //Received Data
 
 uint32_t lastActivity;        //Last noted activity
-uint32_t resetPeriod = 1000;   //Watchdog Reset Timer
-uint16_t delayTimeUS = 7000;  //Delay to transmit on tsFinalAckSent
+uint32_t resetPeriod = 1000;  //Watchdog Reset Timer
+uint16_t delayTimeUS = 7000;  //Delay to transmit on tsSentFinalAck
+
+DW1000Time delayTransmit = DW1000Time(delayTimeUS, DW1000Time::MICROSECONDS);
 
 void setup() {
     Serial.begin(115200);//Baud Rate
-    Serial.println(F("Anchor Starting..."));
+    Serial.println(F("Tag Starting..."));
 
     //Setup Output Pins Arduino Pro Mini
     DW1000.begin(PIN_IRQ, PIN_RST);
@@ -72,10 +74,10 @@ void setup() {
     DW1000.attachReceivedHandler(handleReceived);
     delay(1000);
     receiver();
-    transmitFinalAck();
+    Serial.println(F("Tag Initialized: Polling..."));
     noteActivity();
-    Serial.println(F("Anchor Initialized"));
-}
+    transmitPoll();
+}    
 
 void receiver() {
     DW1000.newReceive();
@@ -84,31 +86,32 @@ void receiver() {
     DW1000.startReceive();
 }
 
-void transmitPollAck() {
+void transmitPoll() {
     DW1000.newTransmit();
     DW1000.setDefaults();
-    data[0] = POLL_ACK;
+    data[0] = POLL;
     data[17] = DEVICE_ID;
-    DW1000.setDelay(DW1000Time(delayTimeUS, DW1000Time::MICROSECONDS));
+    tsSentPoll = DW1000.setDelay(delayTransmit);
+    tsSentPoll.getTimestamp(data + 1);
     DW1000.setData(data, DATA_LENGTH);
     DW1000.startTransmit();
-    sentMsgId = POLL_ACK;
+    sentMsgId = POLL;
 }
 
-void transmitFinalAck() {
+void transmitFinal() {
     DW1000.newTransmit();
     DW1000.setDefaults();
-    data[0] = FINAL_ACK;
+    data[0] = FINAL;
     data[17] = DEVICE_ID;
-    DW1000Time delayFinalAck = DW1000Time(delayTimeUS, DW1000Time::MICROSECONDS);
-    tsFinalAckSent = DW1000.setDelay(delayFinalAck);
-    tsPollAckSent.getTimestamp(data + 1);
-    tsFinalReceived.getTimestamp(data + 6);
-    tsFinalAckSent.getTimestamp(data + 11);
+    tsSentFinal = DW1000.setDelay(delayTransmit);
+    tsReceivedPollAck.getTimestamp(data + 6);
+    tsSentFinal.getTimestamp(data + 11);
     DW1000.setData(data, DATA_LENGTH);
     DW1000.startTransmit();
-    sentMsgId = FINAL_ACK;
+    sentMsgId = FINAL;
 }
+
+
 
 //Handles sent interrupts
 void handleSent() {
@@ -117,21 +120,20 @@ void handleSent() {
 
 //Handles receive interrupts
 void handleReceived() {
-    DW1000.getData(recData, DATA_LENGTH);
-    recMsgId = recData[0];
     recAck=true;
 }
 
 //Update Watchdog Timer
 void noteActivity() {
-  lastActivity = millis();
+    lastActivity = millis();
 }
-
+ 
 // Reset to Original State
 void resetInactive() {
-    expectedMsgId = POLL;
+    expectedMsgId = POLL_ACK;
     receiver();
-    noteActivity();
+    noteActivity(); 
+    transmitPoll();
 }
 
 
@@ -141,7 +143,7 @@ void loop() {
         // check if inactive
         if (millis() - lastActivity > resetPeriod) {
             resetInactive();
-            //Serial.println("Reset");
+            Serial.println("Reset");
         }
     return;
     }
@@ -149,14 +151,17 @@ void loop() {
     //Received Package
     if(recAck){
         recAck=false;
-        if(recMsgId == expectedMsgId){
-            if(recMsgId == POLL){     //Received POLL
-                Serial.println("Received POLL");
-                transmitPollAck();
-            }else{                    //Received FINAL
-                DW1000.getReceiveTimestamp(tsFinalReceived);
-                Serial.println("Received FINAL");
-                transmitFinalAck();
+        DW1000.getData(recData, DATA_LENGTH);
+        recMsgId = recData[0];
+        recDevId = recData[17];
+        if((recMsgId == expectedMsgId)){
+            if(recMsgId == POLL_ACK){     //Received POLL_ACK
+                DW1000.getReceiveTimestamp(tsReceivedPollAck);
+                Serial.println("Received POLL_ACK");
+                transmitFinal();
+            }else{                    //Received RANGE_REPORT
+                Serial.println("Received RANGE_REPORT");
+                expectedMsgId = 255;
             }
             noteActivity();           //Update Watchdog
         }
@@ -165,15 +170,13 @@ void loop() {
     //Sent Package
     if(sentAck){
         sentAck=false;
-        if(sentMsgId == POLL_ACK){
-            DW1000.getTransmitTimestamp(tsPollAckSent);
-            expectedMsgId = FINAL;
-            Serial.println("Sent POLL_ACK");
-            receiver();
-        }else{
-            DW1000.getTransmitTimestamp(tsPollAckSent);
-            expectedMsgId = POLL;      
-            Serial.println("Sent FINAL_ACK");
+        if(sentMsgId == POLL){
+            expectedMsgId = POLL_ACK;
+            Serial.println("Sent POLL");
+        }
+        else if(sentMsgId == FINAL){
+            expectedMsgId = RANGE_REPORT;      
+            Serial.println("Sent FINAL");            
         }
     }
 }
