@@ -1,8 +1,17 @@
+"""
+Kalman.py
+Oscar Johansson, Lucas Wassénius
+This is the class for the Kalman filter. It is supplied with an initial guess of the position, the maximum error of this position,
+the standard deviation of the sensor measurements and a coefficient for the system noise covariance matrix. New measurements
+is continouosly fed to the filter function and the filtered values are returned.
+"""
+
 import numpy as np
 
 class KalmanFilter():
-    def __init__(self, xInit, yInit, initPosError, sigmaSensor):
+    def __init__(self, xInit, yInit, initPosError, sigmaSensor,coeff):
         #Prediction Space
+        self.phi = coeff
         self.x = np.array([[xInit],
                       [yInit],
                       [0],
@@ -18,7 +27,7 @@ class KalmanFilter():
         self.Q = np.array([[0,0,0,0],
                            [0,0,0,0],
                            [0,0,1,0],
-                           [0,0,0,1]])
+                           [0,0,0,1]])*self.phi
         
         #Measurement Space
         self.z = np.array([[0],
@@ -42,8 +51,17 @@ class KalmanFilter():
                           [Py]])
         
         #Prediction
+        self.x = self.F.dot(self.x)
+        self.P = self.F.dot(self.P).dot(self.F.T) + self.Q
         
         #Update
+        y = self.z - self.H.dot(self.x)
+        S = self.R + self.H.dot(self.P).dot(self.H.T)
+        K = self.P.dot(self.H.T).dot(np.linalg.inv(S))
+        self.x = self.x + K.dot(y)
+        self.P = (np.identity(4) - K.dot(self.H)).dot(self.P).dot((np.identity(4) - K.dot(self.H)).T) + K.dot(self.R).dot(K.T)
+        
+        return self.x[0],self.x[1]
     
     def adjustMatrices(self, dt):
         """
@@ -57,4 +75,4 @@ class KalmanFilter():
         self.Q = np.array([[dt**2,0,dt,0],
                            [0,dt**2,0,dt],
                            [dt,0,1,0],
-                           [0,dt,0,1]])
+                           [0,dt,0,1]])*self.phi
