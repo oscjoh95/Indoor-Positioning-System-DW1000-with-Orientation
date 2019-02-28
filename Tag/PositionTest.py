@@ -26,13 +26,21 @@ DATA_LEN = 17
 data = [0] * 5
 d1 = [0] * 3
 d2 = [0] * 3
-ANCHOR1 = (0.0,0.0)  #Adjust when anchors placed
-ANCHOR2 = (2.4,0.0) #Adjust when anchors placed
-ANCHOR3 = (0.96,4.79) #Adjust when anchors placed
 ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
 SAMPLING_TIME = 500#In ms
 samplingStartTime = 0
-truePos = (0,0)
+
+#Setup constants
+ANCHOR1 = (0.0,0.0)  #Adjust when anchors placed
+ANCHOR2 = (2.4,0.0) #Adjust when anchors placed
+ANCHOR3 = (0.96,4.79) #Adjust when anchors placed
+truePos = (0.96,0.50)
+#Filter
+initX = 5.0
+initY = 2.0
+initMaxError = 2
+sigmaSensor = 0.4
+phi = 0.001
 
 #Anchor arrays
 anchorX = np.array([ANCHOR1[0], ANCHOR2[0], ANCHOR3[0]])
@@ -44,9 +52,7 @@ print("\n")
 time.sleep(startupTime)
 
 #Initialize filter
-initX = 5.0
-initY = 2.0
-kalman1 = KalmanFilter(initX,initY,2,0.4,0.0000001)
+kalman1 = KalmanFilter(initX,initY,initMaxError,sigmaSensor,phi)
 
 #Figure
 posX = []
@@ -109,8 +115,8 @@ def calculatePosition(values):
     Px = (d1*d1 - d2*d2 + delta2x*delta2x)/(2*delta2x)
     Py = (d1*d1 - d3*d3 + delta3x*delta3x + delta3y*delta3y - 2*delta3x*Px)/(2*delta3y)
     
-    #position = Px,Py
-    position = 0+np.random.normal(0,0.4),0+np.random.normal(0,0.4)
+    position = Px,Py
+    #position = 0+np.random.normal(0,sigmaSensor),0+np.random.normal(0,sigmaSensor)
     return position
 
 def plotPosition(posX,posY, measX, measY):
