@@ -1,7 +1,7 @@
 """
-Main file for the tags that are controlled by a raspberry pi. It alternates sampling between the two
-tags to keep the distances up to date.
-Anchors should be placed in the plane z=0, either in the ceiling or on floor level
+PositionTest.py
+Test file for positioning of one tag. It includes real time plotting and possibility
+to save measurement and filtered values to a text file.
 """
 import DW1000Constants as C
 from DW1000TagClass import *
@@ -32,10 +32,6 @@ ANCHOR3 = (0.96,4.79) #Adjust when anchors placed
 ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
 SAMPLING_TIME = 500#In ms
 samplingStartTime = 0
-FILTER_CHOICE = 0 #Kalman = 0
-
-#Debug
-test = [0]*1000
 truePos = (0,0)
 
 #Anchor arrays
@@ -50,7 +46,7 @@ time.sleep(startupTime)
 #Initialize filter
 initX = 5.0
 initY = 2.0
-kalman1 = KalmanFilter(initX,initY,0,0.4,0.00000001)
+kalman1 = KalmanFilter(initX,initY,2,0.4,0.0000001)
 
 #Figure
 posX = []
@@ -58,7 +54,7 @@ posY = []
 line1 = []
 line4 = []
 
-#
+#Arrays for saving values to text file 
 filX = []
 filY = []
 measX = []
@@ -71,6 +67,7 @@ def loop():
     print("-----Module 1-----")
     distance = None
     anchorID = None
+    samplingStartTime = millis()
     while((millis() - samplingStartTime) < SAMPLING_TIME):
         distance = module1.loop()
         anchorID = module1.getCurrentAnchorID()
@@ -85,11 +82,9 @@ def loop():
 
     #Filtering
     dt = (millis() - samplingStartTime)/1000
-    print(dt)
-    #Filter here
     position = kalman1.filter((measurement[0],measurement[1]),dt)
     
-    
+    #Save measurement and filtered values 
     posX.append(position[0])
     posY.append(position[1])
     filX.append(position[0])
@@ -100,8 +95,7 @@ def loop():
     posY = posY[-10:]
     
     #Plotting
-    #plotPosition(posX,posY, measurement[0], measurement[1])
-    #samplingStartTime = millis()
+    plotPosition(posX,posY, measurement[0], measurement[1])
     
 def calculatePosition(values):
     """
@@ -120,39 +114,43 @@ def calculatePosition(values):
     return position
 
 def plotPosition(posX,posY, measX, measY):
+    """
+    Function that takes the measurement and filter values and feed them  to the
+    function that updates the plot
+    """
     global line1, line4
     line1,line4 = live_plotter(posX,posY,measX,measY,line1,line4)
-    #plt.plot(anchorX,anchorY,'ro',position[0],position[1],'bo', truePos[0],truePos[1],'rx' , markersize=2)
+    
 def millis():
     """
     This function returns the value (in milliseconds) of a clock which never goes backwards.
     """
     return int(round(monotonic.monotonic() * C.MILLISECONDS))
 
-def live_plotter(x_vec,y1_data, measX,measY,line1,line4,identifier='',pause_time=0.1):
+def live_plotter(x_vec,y1_data, measX,measY,line1,line4,identifier='',pause_time=0.01):
+    """
+    This function updates the plot with new values 
+    """
     global anchorX, anchorY, truePos
     if line1==[]:
-        # this is the call to matplotlib that allows dynamic plotting
+        #Initialize the figure on first call
         plt.ion()
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plt.xlim(-1,5)
         plt.ylim(-1,5)
-        # create a variable for the line so we can later update it
+        #Create a variables for the lines so we can update them later
         line1, = ax.plot(x_vec,y1_data,'go',markersize=2)
         line2, = ax.plot(anchorX,anchorY, 'ro', markersize=2)
         line3, = ax.plot(truePos[0], truePos[1], 'rx', markersize=2)
         line4, = ax.plot(measX,measY,'bo',markersize=2)
-        #update plot label/title
-        plt.title('Title: {}'.format(identifier))
         plt.show()
     
-    # after the figure, axis, and line are created, we only need to update the y-data
+    #After the figure, axis, and line are created, we only need to update the data
     line1.set_data(x_vec,y1_data)
     line4.set_data(measX,measY)
-    # this pauses the data so the figure/axis can catch up - the amount of pause can be altered above
+    # this pauses the data so the figure/axis can catch up
     plt.pause(pause_time)
-    
     # return line so we can update it again in the next iteration
     return line1, line4
 
@@ -163,6 +161,7 @@ def main():
         while 1:
             loop()
     except KeyboardInterrupt:
+        #Save measured and filtered data to a text file on ctrl+c
         data1 = np.vstack((measX,measY))
         data2 = np.hstack((filX,filY))
         data1 = data1.T
@@ -170,7 +169,7 @@ def main():
         print(data2)
         data = np.hstack((data1,data2))
         print(data)
-        np.savetxt('test',data,delimiter=' ',fmt='%.4f', header=('%.4f %.4f' % truePos), comments='')
+        np.savetxt('test',data,delimiter=' ',fmt='%.4f', header=('%.4f %.4f %.4f %.4f' % (truePos[0], truePos[1], 0.0,0.0)), comments='')
         print('Interrupted by user')
 if __name__ == '__main__':
     main()
