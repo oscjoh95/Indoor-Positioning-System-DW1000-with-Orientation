@@ -11,7 +11,9 @@ from Kalman import *
 from math import *
 import monotonic
 import numpy as np
+import warnings
 import matplotlib.pyplot as plt
+warnings.filterwarnings("ignore",".*GUI is implemented.*")
 
 CS1 = 12
 CS2 = 5
@@ -56,8 +58,14 @@ posY = []
 line1 = []
 line4 = []
 
+#
+filX = []
+filY = []
+measX = []
+measY = []
+
 def loop():
-    global samplingStartTime, posX, posY, measX, measY
+    global samplingStartTime, posX, posY, filX, filY, measX, measY
     
     #Module 1
     print("-----Module 1-----")
@@ -81,14 +89,19 @@ def loop():
     #Filter here
     position = kalman1.filter((measurement[0],measurement[1]),dt)
     
+    
     posX.append(position[0])
     posY.append(position[1])
+    filX.append(position[0])
+    filY.append(position[1])
+    measX.append(measurement[0])
+    measY.append(measurement[1])
     posX = posX[-10:]
     posY = posY[-10:]
     
     #Plotting
-    plotPosition(posX,posY, measurement[0], measurement[1])
-    samplingStartTime = millis()
+    #plotPosition(posX,posY, measurement[0], measurement[1])
+    #samplingStartTime = millis()
     
 def calculatePosition(values):
     """
@@ -144,13 +157,19 @@ def live_plotter(x_vec,y1_data, measX,measY,line1,line4,identifier='',pause_time
     return line1, line4
 
 def main():
-    global posX, posY, truePos
+    global filX, filY, measX, measY, truePos
     try:
         samplingStartTime = millis()
         while 1:
             loop()
     except KeyboardInterrupt:
-        data = np.concatenate((posX,posY),axis=1)
+        data1 = np.vstack((measX,measY))
+        data2 = np.hstack((filX,filY))
+        data1 = data1.T
+        print(data1)
+        print(data2)
+        data = np.hstack((data1,data2))
+        print(data)
         np.savetxt('test',data,delimiter=' ',fmt='%.4f', header=('%.4f %.4f' % truePos), comments='')
         print('Interrupted by user')
 if __name__ == '__main__':
