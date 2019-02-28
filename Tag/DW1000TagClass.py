@@ -308,7 +308,7 @@ class DW1000Tag():
         self._operationMode[C.PREAMBLE_LENGTH_BIT] = self.prealen
 
         # setChannel
-        self.setChannel(C.CHANNEL_5)
+        self.setChannel(C.CHANNEL_4)
 
         # setPreambleCode
         if mode[1] == C.TX_PULSE_FREQ_16MHZ:
@@ -1589,7 +1589,6 @@ class DW1000Tag():
         #self.expectedMsgID = C.POLL_ACK
         self.receiver()
         self.noteActivity()
-        print("Reset")
         self.transmitPoll()
 
     def transmitPoll(self):
@@ -1614,7 +1613,7 @@ class DW1000Tag():
         self.setTimeStamp(self.data, ts, 11)
         self.setData(self.data, self.DATA_LEN)
         self.startTransmit()
-        print("Final Sent")
+        
     
     def computeTimesAssymetric(self):
         """
@@ -1658,7 +1657,6 @@ class DW1000Tag():
                 #print(self.msgID)
                 #self.protocolFailed = True
             if(self.msgID == C.POLL_ACK): #& (self.anchorID == self.DEFAULT_ANCHOR_ID)):
-                print("Received Poll Ack")
                 #self.protocolFailed = False
                 self.setTimeStamp(self.data, self.getReceiveTimestamp(), 6)
                 #self.expectedMsgID = C.RANGE_REPORT
@@ -1666,13 +1664,11 @@ class DW1000Tag():
                 self.noteActivity()
             elif(self.msgID == C.RANGE_REPORT): #& (self.anchorID == self.currentAnchorID)):
                 #self.expectedMsgID = C.POLL_ACK
-                self.noteActivity()
-                print("Received Range Report")              
+                self.noteActivity()             
                 self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is saved at position 1
                 self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
                 print("Distance: %.2f m" %(self.distance))
                 self.currentAnchorID = self.data[16]
-                print(self.data)
                 return self.distance
             else:
                 self.resetInactive()
