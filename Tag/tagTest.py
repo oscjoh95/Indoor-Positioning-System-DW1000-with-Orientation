@@ -1,4 +1,6 @@
 """
+tagTest.py
+Oscar Johansson, Lucas Wassénius
 Main file for the tags that are controlled by a raspberry pi. It alternates sampling between the two
 tags to keep the distances up to date.
 Anchors should be placed in the plane z=0, either in the ceiling or on floor level
@@ -56,8 +58,8 @@ module2.idle()
 print("\n")
 time.sleep(startupTime)
 
-kalman1 = KalmanFilter("Module1 filter")
-kalman2 = KalmanFilter("Module2 filter")
+#kalman1 = KalmanFilter("Module1 filter")
+#kalman2 = KalmanFilter("Module2 filter")
 def loop():
     
     #Module 1

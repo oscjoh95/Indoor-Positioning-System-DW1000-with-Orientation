@@ -31,7 +31,7 @@ class DW1000Tag():
         self.tsSentFinalAck = 0
         self.tsReceivedFinalAck = 0
         self.computedTime = 0
-        self.REPLY_DELAY_TIME_US = 7000
+        self.REPLY_DELAY_TIME_US = 3000
         self.distance = 0
         self.currentAnchorID = 0
     
@@ -55,7 +55,7 @@ class DW1000Tag():
         self.setup(self.PIN_SS)
         print("DW1000 %s initialized" %self.name)
         print("############### ANCHOR ##############")
-        self.generalConfiguration(uniqueID, C.MODE_LONGDATA_RANGE_ACCURACY)
+        self.generalConfiguration(uniqueID, C.MODE_SHORTDATA_FAST_ACCURACY)
         self.registerCallback("handleSent", self.handleSent)
         self.registerCallback("handleReceived", self.handleReceived)
         self.setAntennaDelay(antennaDelay)
@@ -1333,6 +1333,8 @@ class DW1000Tag():
 
         if self._operationMode[C.PREAMBLE_LENGTH_BIT] == C.TX_PREAMBLE_LEN_64:
             plen = C.PLEN_64
+        if self._operationMode[C.PREAMBLE_LENGTH_BIT] == C.TX_PREAMBLE_LEN_1024:
+            plen = C.PLEN_1024    
         elif self._operationMode[C.PREAMBLE_LENGTH_BIT] == C.TX_PREAMBLE_LEN_2048:
             plen = C.PLEN_2048
         else:
@@ -1340,6 +1342,8 @@ class DW1000Tag():
 
         if self._operationMode[C.DATA_RATE_BIT] == C.TRX_RATE_110KBPS:
             dr = C.DATA_RATE_110
+        elif self._operationMode[C.DATA_RATE_BIT] == C.TRX_RATE_6800KBPS:
+            dr = C.DATA_RATE_6800
         else:
             dr = C.DATA_RATE_0
 
