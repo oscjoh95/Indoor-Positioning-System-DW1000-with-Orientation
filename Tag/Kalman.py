@@ -15,28 +15,25 @@ class KalmanFilter():
         self.x = np.array([[xInit],
                       [yInit],
                       [0],
-                      [0],
-                      [0],
                       [0]])
-        self.F = np.identity(6)
-        self.P = np.array([[(initPosError/3)**2,0,0,0,0,0],
-                           [0,(initPosError/3)**2,0,0,0,0],
-                           [0,0,0,0,0,0],
-                           [0,0,0,0,0,0],
-                           [0,0,0,0,0,0],
-                           [0,0,0,0,0,0]])
-        self.Q = np.array([[0,0,0,0,0,0],
-                           [0,0,0,0,0,0],
-                           [0,0,0,0,0,0],
-                           [0,0,0,0,0,0],
-                           [0,0,0,0,1,0],
-                           [0,0,0,0,0,1]])*self.phi
+        self.F = np.array([[1,0,0,0],
+                           [0,1,0,0],
+                           [0,0,1,0],
+                           [0,0,0,1]])
+        self.P = np.array([[(initPosError/3)**2,0,0,0],
+                           [0,(initPosError/3)**2,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0]])
+        self.Q = np.array([[0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,1,0],
+                           [0,0,0,1]])*self.phi
         
         #Measurement Space
         self.z = np.array([[0],
                           [0]])
-        self.H = np.array([[1,0,0,0,0,0],
-                           [0,1,0,0,0,0]])
+        self.H = np.array([[1,0,0,0],
+                           [0,1,0,0]])
         self.R = np.array([[sigmaSensor**2, 0],
                            [0, sigmaSensor**2]])
         
@@ -62,7 +59,7 @@ class KalmanFilter():
         S = self.R + self.H.dot(self.P).dot(self.H.T)
         K = self.P.dot(self.H.T).dot(np.linalg.inv(S))
         self.x = self.x + K.dot(y)
-        self.P = (np.identity(6) - K.dot(self.H)).dot(self.P).dot((np.identity(6) - K.dot(self.H)).T) + K.dot(self.R).dot(K.T)
+        self.P = (np.identity(4) - K.dot(self.H)).dot(self.P).dot((np.identity(4) - K.dot(self.H)).T) + K.dot(self.R).dot(K.T)
         
         return self.x[0],self.x[1]
     
@@ -71,15 +68,11 @@ class KalmanFilter():
         This function adjust the values in the state transition matrix and covariance matrix for the
         current timestep
         """
-        self.F = np.array([[1,0,dt,0,(dt**2)/2,0],
-                           [0,1,0,dt,0,(dt**2)/2],
-                           [0,0,1,0,dt,0],
-                           [0,0,0,1,0,dt],
-                           [0,0,0,0,1,0],
-                           [0,0,0,0,0,1]])
-        self.Q = np.array([[(dt**4)/4,0,(dt**3)/2,0,(dt**2)/2,0],
-                           [0,(dt**4)/4,0,(dt**3)/2,0,(dt**2)/2],
-                           [(dt**3)/2,0,(dt**2),0,dt,0],
-                           [0,(dt**3)/2,0,(dt**2),0,dt],
-                           [(dt**2)/2,0,dt,0,1,0],
-                           [0,(dt**2)/2,0,dt,0,1]])*self.phi
+        self.F = np.array([[1,0,dt,0],
+                           [0,1,0,dt],
+                           [0,0,1,0],
+                           [0,0,0,1]])
+        self.Q = np.array([[dt**2,0,dt,0],
+                           [0,dt**2,0,dt],
+                           [dt,0,1,0],
+                           [0,dt,0,1]])*self.phi
