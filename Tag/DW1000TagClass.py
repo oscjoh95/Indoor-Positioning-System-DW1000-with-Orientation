@@ -1,5 +1,8 @@
 """
-This file contains the class for the positioning tags. 
+DW1000TagClass.py
+This file contains the class for the positioning tags. It's based on the
+python library for the DW1000 module available from github:
+https://github.com/ThingType/DW1000_Python_library
 """
 import time
 import monotonic
@@ -31,7 +34,7 @@ class DW1000Tag():
         self.tsSentFinalAck = 0
         self.tsReceivedFinalAck = 0
         self.computedTime = 0
-        self.REPLY_DELAY_TIME_US = 3000
+        self.REPLY_DELAY_TIME_US = 4000
         self.distance = 0
         self.currentAnchorID = 0
     
@@ -70,14 +73,11 @@ class DW1000Tag():
 
         Args:
                 irq : The GPIO pin number managing interrupts.
-        """
-        #global _deviceMode
-
-        # Wait 5 us to open spi connection to let the chip enter idle state, see 2.3.2 of the DW1000 user manual (INIT).
+        """# Wait 5 us to open spi connection to let the chip enter idle state, see 2.3.2 of the DW1000 user manual (INIT).
         time.sleep(C.INIT_DELAY)
-        GPIO.setmode(GPIO.BCM) #Move out
-        self.spi.open(0, 0)         #Move out
-        self.spi.max_speed_hz = 2000000 #Move out
+        GPIO.setmode(GPIO.BCM) 
+        self.spi.open(0, 0)        
+        self.spi.max_speed_hz = 4000000 
         self._deviceMode = C.IDLE_MODE
         GPIO.setup(irq, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -91,7 +91,6 @@ class DW1000Tag():
         Args:
                 ss: The GPIO pin number of the chip enable/select for the SPI bus.
         """
-        #global _chipSelect, _syscfg, _sysmask
 
         self._chipSelect = ss
         GPIO.setup(self._chipSelect, GPIO.OUT)
@@ -115,21 +114,17 @@ class DW1000Tag():
         self.manageLDE()
         self.enableClock(C.AUTO_CLOCK)
 
-    def handleInterrupt(self, channel): #(self, channel):
-        #self.channel = channel
+    def handleInterrupt(self, channel): 
         """
-        Callback invoked on the rising edge of the interrupt pin. Handle the configured interruptions.
+        Callback invoked on the rising edge of the interrupt pin.
+        Handle the configured interruptions.
         """
-
-        #print("\nInterrupt!")
         self.readBytes(C.SYS_STATUS, C.NO_SUB, self._sysstatus, 5)
-        #print(self._sysstatus)
         self.msgReceived = self.getBit(self._sysstatus, 5, C.RXFCG_BIT)
         self.receiveTimeStampAvailable = self.getBit(self._sysstatus, 5, C.LDEDONE_BIT)
         self.transmitDone = self.getBit(self._sysstatus, 5, C.TXFRS_BIT)
         if self.transmitDone:
             self.callbacks["handleSent"]()
-            #print('Handle sent')
             self.clearTransmitStatus()
         if self.receiveTimeStampAvailable:
             self.setBit(self._sysstatus, 5, C.LDEDONE_BIT, True)
@@ -146,7 +141,6 @@ class DW1000Tag():
                 self.startReceive()
         elif self.msgReceived:
             self.callbacks["handleReceived"]()
-            #print('Handle received')
             self.clearReceiveStatus()
             if self._permanentReceive:
                 # no need to start a new receive since we enabled the permanent receive mode in the system configuration register. it created an interference causing problem
@@ -167,7 +161,6 @@ class DW1000Tag():
                 string: This is the key used to store the callback in the dictionary.
                 callback: This is the saved callback.
         """
-        #global callbacks
         if callback not in self.callbacks:
             self.callbacks[string] = callback
 
@@ -216,7 +209,6 @@ class DW1000Tag():
         """
         This function sets the default mode on the chip initialization : MODE_LONGDATA_RANGE_LOWPOWER and with receive/transmit mask activated when in IDLE mode.
         """
-        #global _syscfg, _sysmask
         if (self._deviceMode == C.TX_MODE):
             pass
         elif self._deviceMode == C.RX_MODE:
@@ -254,7 +246,6 @@ class DW1000Tag():
         """
         This function configures the DW1000 chip to perform with a specific mode. It sets up the TRX rate the TX pulse frequency and the preamble length.
         """
-        #global _txfctrl, _chanctrl, _operationMode
 
         # setDataRate
         self.rate = mode[0]
@@ -367,8 +358,6 @@ class DW1000Tag():
             reverseEUI[i] = currentAddress[8 - i - 1]
 
         self.writeBytes(C.EUI, C.NO_SUB, reverseEUI, 8)
-        #print('Unique ID: ')
-        #print(reverseEUI)
 
 
     def setDeviceAddress(self, value):
@@ -378,7 +367,6 @@ class DW1000Tag():
         Args:
                 value : The address you want to set to the chip.
         """
-        #global _networkAndAddress
         self._networkAndAddress[0] = value & C.MASK_LS_BYTE
         self._networkAndAddress[1] = (value >> 8) & C.MASK_LS_BYTE
 
@@ -390,7 +378,6 @@ class DW1000Tag():
         Args:
                 value : The network id you want to assign to the chip.
         """
-        #global _networkAndAddress
         self._networkAndAddress[2] = value & C.MASK_LS_BYTE
         self._networkAndAddress[3] = (value >> 8) & C.MASK_LS_BYTE
 
@@ -402,7 +389,6 @@ class DW1000Tag():
         Args:
                 channel : The channel value you want to assign to the chip.
         """
-        #global _operationMode, _chanctrl
         channel = channel & C.MASK_NIBBLE
         self._chanctrl[0] = ((channel | (channel << 4)) & C.MASK_LS_BYTE)
         self._operationMode[C.CHANNEL_BIT] = channel
@@ -415,7 +401,6 @@ class DW1000Tag():
         Args:
                  preacode : The preamble code type you want to assign to the chip.
         """
-        #global _chanctrl, _operationMode
         preacode = preacode & C.PREACODE_MASK1
         self._chanctrl[2] = self._chanctrl[2] & C.PREACODE_MASK2
         self._chanctrl[2] = self._chanctrl[2] | ((preacode << 6) & C.MASK_LS_BYTE)
@@ -523,9 +508,7 @@ class DW1000Tag():
         # configure mode, network
         self.newConfiguration()
         self.setDefaultConfiguration()
-        # setDeviceAddress(2)
         self.setDeviceAddress(deviceAddress)
-        # setNetworkId(10)
         self.setNetworkId(0xDECA)
         self.enableMode(mode)
         self.setAntennaDelay(C.ANTENNA_DELAY)
@@ -536,8 +519,6 @@ class DW1000Tag():
         data3 = [0] * 4
         self.readBytes(C.DEV_ID, C.NO_SUB, data, 4)
         self.readBytes(C.EUI, C.NO_SUB, data2, 8)
-        #print('device ID register')
-        #print(data2)
 
         self.readBytes(C.PANADR, C.NO_SUB, data3, 4)
         print("\nDevice ID %02X - model: %d, version: %d, revision: %d" %
@@ -824,7 +805,6 @@ class DW1000Tag():
         """
         This function puts the chip into idle mode.
         """
-        #global _deviceMode
         self.setArray(self._sysctrl, 4, 0x00)
         self.setBit(self._sysctrl, 4, C.TRXOFF_BIT, True)
         self._deviceMode = C.IDLE_MODE
@@ -840,7 +820,6 @@ class DW1000Tag():
         """
         This function prepares the chip for a new reception. It clears the system control register and also clear the RX latched bits in the SYS_STATUS register.
         """
-        #global _deviceMode
         self.idle()
         self.setArray(self._sysctrl, 4, 0x00)
         self.clearReceiveStatus()
@@ -861,16 +840,14 @@ class DW1000Tag():
         """
         This function configures the dw1000 chip to receive data permanently.
         """
-        #global _permanentReceive
         self._permanentReceive = True
         self.setBit(self._syscfg, 4, C.RXAUTR_BIT, True)
         self.writeBytes(C.SYS_CFG, C.NO_SUB, self._syscfg, 4)
 
     def NotreceivePermanently(self):
         """
-        This function configures the dw1000 chip to receive data permanently.
+        This function configures the dw1000 chip to not receive data permanently.
         """
-        #global _permanentReceive
         self._permanentReceive = False
         self.setBit(self._syscfg, 4, C.RXAUTR_BIT, True)
         self.writeBytes(C.SYS_CFG, C.NO_SUB, self._syscfg, 4)
@@ -1101,7 +1078,6 @@ class DW1000Tag():
         """
         This function prepares the chip for a new transmission. It clears the system control register and also clears the TX latched bits in the SYS_STATUS register.
         """
-        #global _deviceMode
         self.idle()
         self.setArray(self._sysctrl, 4, 0x00)
         self.clearTransmitStatus()
@@ -1112,7 +1088,6 @@ class DW1000Tag():
         """
         This function configures the chip to start the transmission of the message previously set in the TX register. It sets TXSTRT bit in the system control register to begin transmission.
         """
-        #global _sysctrl, _deviceMode
         self.writeBytes(C.TX_FCTRL, C.NO_SUB, self._txfctrl, 5)
         self.setBit(self._sysctrl, 4, C.SFCST_BIT, False)
         self.setBit(self._sysctrl, 4, C.TXSTRT_BIT, True)
@@ -1312,9 +1287,8 @@ class DW1000Tag():
                 data: the byte array which contains the data to be written in the register
                 dataLength: The size of the data which will be sent.
         """
-        #global _txfctrl
         self.writeBytes(C.TX_BUFFER, C.NO_SUB, data, dataLength)
-        dataLength += 2  # _frameCheck true, two bytes CRC
+        dataLength += 2  
         self._txfctrl[0] = (dataLength & C.MASK_LS_BYTE)
         self._txfctrl[1] &= C.SET_DATA_MASK1
         self._txfctrl[1] |= ((dataLength >> 8) & C.SET_DATA_MASK2)
@@ -1590,7 +1564,6 @@ class DW1000Tag():
         """
         Resets the module and transmits a new poll
         """
-        #self.expectedMsgID = C.POLL_ACK
         self.receiver()
         self.noteActivity()
         self.transmitPoll()
@@ -1601,7 +1574,7 @@ class DW1000Tag():
         """
         self.newTransmit()
         self.data[0] = C.POLL
-        ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
+        ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   
         self.setTimeStamp(self.data, ts, 1)
         self.setData(self.data, self.DATA_LEN)
         self.startTransmit()
@@ -1613,7 +1586,7 @@ class DW1000Tag():
         """
         self.newTransmit()
         self.data[0] = C.FINAL
-        ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   #Probably not necessary
+        ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   
         self.setTimeStamp(self.data, ts, 11)
         self.setData(self.data, self.DATA_LEN)
         self.startTransmit()
@@ -1644,35 +1617,29 @@ class DW1000Tag():
         
         #On sent message
         if(self.sentAck):
-            #print("sent something")
             self.sentAck = False
             self.msgID = self.data[0]
-            if(self.msgID == C.FINAL):
-                self.noteActivity()
+            #if(self.msgID == C.FINAL):
+                #self.noteActivity()
         
         #On received message
         if(self.receivedAck):
-            #print("Received Something")
             self.receivedAck = False
             self.data = self.getData(self.DATA_LEN)
             self.msgID = self.data[0]
-            #if((self.msgID != self.expectedMsgID)): #& (self.anchorID == self.currentAnchorID)):
-                #print("WrongMsgID")
-                #print(self.msgID)
-                #self.protocolFailed = True
-            if(self.msgID == C.POLL_ACK): #& (self.anchorID == self.DEFAULT_ANCHOR_ID)):
-                #self.protocolFailed = False
+             #print(self.data)
+            if(self.msgID == C.POLL_ACK): 
                 self.setTimeStamp(self.data, self.getReceiveTimestamp(), 6)
-                #self.expectedMsgID = C.RANGE_REPORT
                 self.transmitFinal()
-                self.noteActivity()
-            elif(self.msgID == C.RANGE_REPORT): #& (self.anchorID == self.currentAnchorID)):
-                #self.expectedMsgID = C.POLL_ACK
-                self.noteActivity()             
-                self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is saved at position 1
+                #self.noteActivity()
+            elif(self.msgID == C.RANGE_REPORT): 
+                #self.noteActivity()             
+                self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is stored at position 1
                 self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
-                print("Distance: %.2f m" %(self.distance))
                 self.currentAnchorID = self.data[16]
+                print(self.data)
+                #if(self.currentAnchorID>2):
+                #print("Distance: %.2f m" %(self.distance))
                 return self.distance
             else:
                 self.resetInactive()

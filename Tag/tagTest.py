@@ -10,6 +10,7 @@ from DW1000TagClass import *
 import time
 import RPi.GPIO as GPIO
 from Kalman import *
+from KalmanAcceleration import *
 from math import *
 import monotonic
 
@@ -28,9 +29,9 @@ ANCHOR1 = (0,0)  #Adjust when anchors placed
 ANCHOR2 = (10,0) #Adjust when anchors placed
 ANCHOR3 = (5,10) #Adjust when anchors placed
 ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
-SAMPLING_TIME = 500 # Approx. divided by 50 to get ms
+SAMPLING_TIME = 250 #In ms
 samplingStartTime = 0
-FILTER_CHOICE = 0 #Kalman = 0
+FILTER_CHOICE = 0 #Kalman = 0, KalmanAcc = 1
 
 """
 #Debugging
@@ -58,8 +59,10 @@ module2.idle()
 print("\n")
 time.sleep(startupTime)
 
-#kalman1 = KalmanFilter("Module1 filter")
-#kalman2 = KalmanFilter("Module2 filter")
+#if(FILTER_CHOICE == 0)
+    #kalman1 = KalmanFilter("Module1 filter")
+    #kalman2 = KalmanFilter("Module2 filter")
+    
 def loop():
     
     #Module 1
@@ -77,7 +80,7 @@ def loop():
            anchorID = None
     module1.idle()
     print(d1)
-    time.sleep(1) #Remove later
+    #time.sleep(1) #Remove later
 
     #Module 2
     print("-----Module 2-----")
@@ -93,7 +96,7 @@ def loop():
             anchorID = None
     module2.idle()
     print(d2)
-    time.sleep(1) #Remove later
+    #time.sleep(1) #Remove later
     
     #Calculate position measurements
     print("-----Position Calculations-----")

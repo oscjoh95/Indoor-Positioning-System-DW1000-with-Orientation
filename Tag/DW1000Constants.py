@@ -1,5 +1,8 @@
 """
-This python module is used to store every constants relevant for the DW1000 module and scripts.
+DW1000Constants.py
+This python module is used to store every constants
+relevant for the DW1000 module and scripts. From the python library for the
+DW10000 module available from github: https://github.com/ThingType/DW1000_Python_library
 """
 
 # SPI operations
@@ -397,7 +400,7 @@ FINAL = 5
 FINAL_ACK = 6
 RANGE_FAILED = 255
 
-RESET_PERIOD = 100
+RESET_PERIOD = 120
 
 # Bits/Bytes operation
 MASK_LS_BYTE = 0xFF
