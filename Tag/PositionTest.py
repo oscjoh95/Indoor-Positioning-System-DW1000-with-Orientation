@@ -8,6 +8,7 @@ from DW1000TagClass import *
 import time
 import RPi.GPIO as GPIO
 from Kalman import *
+from ParticleFilter import *
 from math import *
 import monotonic
 import numpy as np
@@ -35,12 +36,23 @@ ANCHOR1 = (0.0,0.0)  #Adjust when anchors placed
 ANCHOR2 = (2.4,0.0) #Adjust when anchors placed
 ANCHOR3 = (0.96,4.79) #Adjust when anchors placed
 truePos = (0.96,0.50)
+
 #Filter
+FILTER = 0 # 0=Kalman, 1=PF
+
+#Kalman
 initX = 5.0
 initY = 2.0
 initMaxError = 2
 sigmaSensor = 0.4
 phi = 0.001
+
+#PF
+N = 1000
+xDim = 10
+yDim = 10
+anchors = np.array([[0, 0],[10, 0],[5, 10]])
+sigma = 0.09
 
 #Anchor arrays
 anchorX = np.array([ANCHOR1[0], ANCHOR2[0], ANCHOR3[0]])
@@ -52,8 +64,11 @@ print("\n")
 time.sleep(startupTime)
 
 #Initialize filter
-kalman1 = KalmanFilter(initX,initY,initMaxError,sigmaSensor,phi)
-
+if FILTER == 0:
+    kalman1 = KalmanFilter(initX,initY,initMaxError,sigmaSensor,phi)
+if FILTER == 1:
+    pf = ParticleFilter(N, xDim, yDim, anchors, sigma)
+    
 #Figure
 posX = []
 posY = []
@@ -81,14 +96,25 @@ def loop():
            d1[anchorID] = distance
            distance = None
            anchorID = None
-           
+         
+    #Filtering     
+    if FILTER == 1:
+        dt = (millis() - samplingStartTime)/1000
+        pf.predict(dt)
+        measurement = pf.update(d1)
+        position = pf.estimate()
+        pf.resample()
+        
     #Calculate position from measurements
-    print("-----Position Calculations-----")
-    measurement = calculatePosition(d1)
+    if FILTER == 0:
+        print("-----Position Calculations-----")
+        measurement = calculatePosition(d1)
+
 
     #Filtering
-    dt = (millis() - samplingStartTime)/1000
-    position = kalman1.filter((measurement[0],measurement[1]),dt)
+    if FILTER == 0:
+        dt = (millis() - samplingStartTime)/1000
+        position = kalman1.filter((measurement[0],measurement[1]),dt)
     
     #Save measurement and filtered values 
     posX.append(position[0])

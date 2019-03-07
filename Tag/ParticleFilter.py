@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import math
 import scipy as sp
 import random as r
-
+from scipy import stats
 
 class ParticleFilter():
     
@@ -63,7 +63,7 @@ class ParticleFilter():
         maxIndex = np.argmax(self.weights)
         
         #plt.plot(self.particles[:,0],self.particles[:,1], 'b.', markersize = 0.5)
-        plt.plot(x,y,'gx')
+        #plt.plot(x,y,'gx')
         
         return x,y
     
