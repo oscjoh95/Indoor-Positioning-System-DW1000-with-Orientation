@@ -14,12 +14,12 @@ from scipy import stats
 
 class ParticleFilter():
     
-    def __init__(self, N, xDim, yDim, anchors, sigma):
+    def __init__(self, N, xDim, yDim, anchors, sigma, vstd, hstd):
         
         #Tuning parameters
-        self.velocitystd = 0.13 # 0.15
-        self.headingstd = 0.29 # 0.27
-        self.measImp = sigma*1.5
+        self.velocitystd = vstd#0.13 
+        self.headingstd = hstd#0.29 
+        self.measImp = 0.6#sigma*1.5
         self.N = N
         self.xDim = xDim
         self.yDim = yDim
@@ -50,7 +50,7 @@ class ParticleFilter():
     def update(self, z):
         """
         This function updates the weights of the particles depending on their
-        distance from the measured value z.
+        euclidian distance from the measured value z.
         """
         x = (z[0]**2 - z[1]**2 + self.anchors[1][0]**2)/(2*self.anchors[1][0])
         y = (z[0]**2 - z[2]**2 + self.anchors[2][0]**2 + self.anchors[2][1]**2 - 2*self.anchors[2][0]*x)/(2*self.anchors[2][1])
@@ -94,3 +94,22 @@ class ParticleFilter():
         self.weights = self.weights[indexes]
         self.weights /= sum(self.weights)
         
+    def updateTest(self, x,y):
+        """
+        This function updates the weights of the particles depending on their
+        euclidian distance from the measured value z. For debugging, takes x and y as input.
+        """
+        #x = (z[0]**2 - z[1]**2 + self.anchors[1][0]**2)/(2*self.anchors[1][0])
+        #y = (z[0]**2 - z[2]**2 + self.anchors[2][0]**2 + self.anchors[2][1]**2 - 2*self.anchors[2][0]*x)/(2*self.anchors[2][1])
+        
+        dist = np.linalg.norm(self.particles[:,0:2] - (x,y), axis = 1)
+        
+        self.weights *= sp.stats.norm(0, self.measImp).pdf(dist)
+        self.weights /= sum(self.weights)
+        
+        maxIndex = np.argmax(self.weights)
+        
+        #plt.plot(self.particles[:,0],self.particles[:,1], 'b.', markersize = 0.5)
+        #plt.plot(x,y,'gx')
+        
+        return x,y

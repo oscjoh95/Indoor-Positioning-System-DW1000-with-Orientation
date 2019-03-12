@@ -20,25 +20,25 @@ CS1 = 12
 CS2 = 5
 IRQ1 = 6
 IRQ2 = 26
-ANTENNA_DELAY1 = 16435#3
-ANTENNA_DELAY2 = 16402#4
+ANTENNA_DELAY1 = 16160#3
+ANTENNA_DELAY2 = 16145#4
 startupTime = 1.5
 DATA_LEN = 17
 data = [0] * 5
 d1 = [0] * 3
 d2 = [0] * 3
 ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
-SAMPLING_TIME = 500#In ms
+SAMPLING_TIME = 250#In ms
 samplingStartTime = 0
 
 #Setup constants
 ANCHOR1 = (0.0,0.0)  #Adjust when anchors placed
-ANCHOR2 = (2.4,0.0) #Adjust when anchors placed
-ANCHOR3 = (0.96,4.79) #Adjust when anchors placed
+ANCHOR2 = (4.37,0.0) #Adjust when anchors placed
+ANCHOR3 = (1.30,6.90) #Adjust when anchors placed
 truePos = (0.96,0.50)
 
 #Filter
-FILTER = 0 # 0=Kalman, 1=PF
+FILTER = 1 # 0=Kalman, 1=PF
 
 #Kalman
 initX = 5.0
@@ -51,7 +51,7 @@ phi = 0.001
 N = 1000
 xDim = 10
 yDim = 10
-anchors = np.array([[0, 0],[10, 0],[5, 10]])
+anchors = np.array([[ANCHOR1[0], ANCHOR1[1]],[ANCHOR2[0], ANCHOR2[1]],[ANCHOR3[0], ANCHOR3[1]]])
 sigma = 0.09
 
 #Anchor arrays
@@ -170,7 +170,7 @@ def live_plotter(x_vec,y1_data, measX,measY,line1,line4,identifier='',pause_time
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plt.xlim(-1,5)
-        plt.ylim(-1,5)
+        plt.ylim(-1,10)
         #Create a variables for the lines so we can update them later
         line1, = ax.plot(x_vec,y1_data,'go',markersize=2)
         line2, = ax.plot(anchorX,anchorY, 'ro', markersize=2)

@@ -299,7 +299,7 @@ class DW1000Tag():
         self._operationMode[C.PREAMBLE_LENGTH_BIT] = self.prealen
 
         # setChannel
-        self.setChannel(C.CHANNEL_4)
+        self.setChannel(C.CHANNEL_5)
 
         # setPreambleCode
         if mode[1] == C.TX_PULSE_FREQ_16MHZ:
@@ -1577,7 +1577,8 @@ class DW1000Tag():
         ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   
         self.setTimeStamp(self.data, ts, 1)
         self.setData(self.data, self.DATA_LEN)
-        self.startTransmit()
+        self.startTransmit()        
+        print(self.data)
         print("Poll sent")
        
     def transmitFinal(self):
@@ -1639,7 +1640,7 @@ class DW1000Tag():
                 self.currentAnchorID = self.data[16]
                 print(self.data)
                 #if(self.currentAnchorID>2):
-                #print("Distance: %.2f m" %(self.distance))
+                print("Distance: %.2f m" %(self.distance))
                 return self.distance
             else:
                 self.resetInactive()
