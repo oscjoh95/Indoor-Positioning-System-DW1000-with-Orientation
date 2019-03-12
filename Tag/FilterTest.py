@@ -8,14 +8,14 @@ from Kalman import *
 from ParticleFilter import *
 LENGTH = 10
 #Choice of filters
-KALMAN = 0
-PF = 1
+KALMAN = 1
+PF = 0
 sigmaSensor = 0.32
 
 #Create the filter
 ##Kalman
 if KALMAN == 1:
-    initialGuess = (0.0,0.0)
+    initialGuess = (2.0,2.0)
     initialMaxError = 0.0
     phi = 0.00001
     kalman = KalmanFilter(initialGuess[0], initialGuess[1], initialMaxError, sigmaSensor, phi) #Px, Py, Initial Max Position Error, Sigma Sensor
