@@ -19,7 +19,7 @@ trueX = truePos(1);
 trueY = truePos(2);
 
 %Remove first values
-measurements = measurements(20:length(measurements),:);
+measurements = measurements(2:length(measurements),:);
 
 %Anchor positions[A0, A1, A2]
 anchorX = [0; 2.4; 0.96];
@@ -88,17 +88,22 @@ set(gcf, 'Position',  [400, 1000, 500, 200])
 %%  Plotting the data
 dataFig = figure();
 hold on;
+
 unfilteredPlot = scatter(positionX, positionY,20);
 kalmanPlot= scatter(positionXKalman, positionYKalman,20);
 anchorPlot = scatter(anchorX, anchorY,60,'s');
-truePlot = scatter(trueX, trueY,60,'s');
+%truePlot = scatter(trueX, trueY,'s');
 
 axis([-0.5 3 -0.5 5])
 
 unfilteredPlot.MarkerFaceColor = 'blue';
+unfilteredPlot.MarkerEdgeColor = 'blue';
 kalmanPlot.MarkerFaceColor = 'cyan';
+kalmanPlot.MarkerEdgeColor = 'cyan';
 anchorPlot.MarkerFaceColor = 'red';
-truePlot.MarkerFaceColor = 'black';
+anchorPlot.MarkerEdgeColor = 'red';
+%truePlot.MarkerFaceColor = 'black';
+%truePlot.MarkerEdgeColor = 'black';
 
-legend('Unfiltered Positions', 'Filtered Positions', 'Anchor Positions', 'True Position');
+legend('Unfiltered Positions', 'Filtered Positions', 'Anchor Positions');
 
