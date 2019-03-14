@@ -1578,8 +1578,8 @@ class DW1000Tag():
         self.setTimeStamp(self.data, ts, 1)
         self.setData(self.data, self.DATA_LEN)
         self.startTransmit()        
-        print(self.data)
-        print("Poll sent")
+        #print(self.data)
+        #print("Poll sent")
        
     def transmitFinal(self):
         """
@@ -1638,7 +1638,7 @@ class DW1000Tag():
                 self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is stored at position 1
                 self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
                 self.currentAnchorID = self.data[16]
-                print(self.data)
+                #print(self.data)
                 #if(self.currentAnchorID>2):
                 print("Distance: %.2f m" %(self.distance))
                 return self.distance
