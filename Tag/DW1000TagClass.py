@@ -77,11 +77,13 @@ class DW1000Tag():
         time.sleep(C.INIT_DELAY)
         GPIO.setmode(GPIO.BCM) 
         self.spi.open(0, 0)        
-        self.spi.max_speed_hz = 4000000 
+        self.spi.max_speed_hz = 2400000 
         self._deviceMode = C.IDLE_MODE
         GPIO.setup(irq, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         GPIO.add_event_detect(irq, GPIO.RISING, callback=self.handleInterrupt)
+        
+        self.spi.max_speed_hz = 7800000 
 
     def setup(self, ss):
         """
@@ -119,6 +121,7 @@ class DW1000Tag():
         Callback invoked on the rising edge of the interrupt pin.
         Handle the configured interruptions.
         """
+        print("Interrupt")
         self.readBytes(C.SYS_STATUS, C.NO_SUB, self._sysstatus, 5)
         self.msgReceived = self.getBit(self._sysstatus, 5, C.RXFCG_BIT)
         self.receiveTimeStampAvailable = self.getBit(self._sysstatus, 5, C.LDEDONE_BIT)
@@ -1549,7 +1552,8 @@ class DW1000Tag():
     def handleReceived(self):
         """
         Callback for message received. Sets the receivedAck variable true to take action in the loop
-        """        
+        """
+        #print("Received")
         self.receivedAck = True
     
     def receiver(self):
@@ -1577,9 +1581,8 @@ class DW1000Tag():
         ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   
         self.setTimeStamp(self.data, ts, 1)
         self.setData(self.data, self.DATA_LEN)
-        self.startTransmit()        
-        #print(self.data)
-        #print("Poll sent")
+        self.startTransmit()  
+        print("Poll sent")
        
     def transmitFinal(self):
         """
@@ -1620,27 +1623,22 @@ class DW1000Tag():
         if(self.sentAck):
             self.sentAck = False
             self.msgID = self.data[0]
-            #if(self.msgID == C.FINAL):
-                #self.noteActivity()
         
         #On received message
         if(self.receivedAck):
-            self.receivedAck = False
             self.data = self.getData(self.DATA_LEN)
             self.msgID = self.data[0]
-             #print(self.data)
+            print(self.data)
             if(self.msgID == C.POLL_ACK): 
                 self.setTimeStamp(self.data, self.getReceiveTimestamp(), 6)
                 self.transmitFinal()
-                #self.noteActivity()
             elif(self.msgID == C.RANGE_REPORT): 
-                #self.noteActivity()             
                 self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is stored at position 1
                 self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
                 self.currentAnchorID = self.data[16]
                 #print(self.data)
                 #if(self.currentAnchorID>2):
                 print("Distance: %.2f m" %(self.distance))
+                self.receivedAck = False
                 return self.distance
-            else:
-                self.resetInactive()
+            self.receivedAck = False

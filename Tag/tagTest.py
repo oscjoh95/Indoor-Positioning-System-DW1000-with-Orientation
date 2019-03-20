@@ -19,8 +19,8 @@ CS1 = 12
 CS2 = 5
 IRQ1 = 6
 IRQ2 = 26
-ANTENNA_DELAY1 = 16317
-ANTENNA_DELAY2 = 16317
+ANTENNA_DELAY1 = 16368
+ANTENNA_DELAY2 = 16368
 startupTime = 1.0
 DATA_LEN = 17
 data = [0] * 5
@@ -32,7 +32,7 @@ ANCHOR1 = (0,0)  #Adjust when anchors placed
 ANCHOR2 = (10,0) #Adjust when anchors placed
 ANCHOR3 = (5,10) #Adjust when anchors placed
 ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
-SAMPLING_TIME = 250 #In ms
+SAMPLING_TIME = 239 #In ms
 samplingStartTime = 0
 
 #Particle Filter
@@ -52,7 +52,7 @@ module2 = DW1000Tag("module2", CS2, IRQ2, ANTENNA_DELAY2, "82:17:5B:D5:A9:9A:E2:
 module2.idle()
 print("\n")
 time.sleep(startupTime)
- 
+
 def loop():
     global dt1, dt2
     
@@ -61,18 +61,22 @@ def loop():
     anchorID = None
     d1[0] = None
     d1[1] = None
-    d1[2] = None 
+    d1[2] = None
+    #module1.receiver()
     samplingStartTime = millis()
-    while((millis() - samplingStartTime) < SAMPLING_TIME) & ((d1[0] == None) | (d1[1] == None) | (d1[2] == None)):
+    while((d1[0] == None) | (d1[1] == None) | (d1[2] == None)): #(millis() - samplingStartTime) < SAMPLING_TIME) & 
         range = module1.loop()
         anchorID = module1.getCurrentAnchorID()
         if(range != None):
-           #print(anchorID)
-           d1[anchorID] = range
-           range = None
-           anchorID = None
+            print("module1")
+            d1[anchorID] = range
+            range = None
+            anchorID = None
     module1.idle()
-
+    #time.sleep(0.2)
+    #module2.receiver()
+    #print(millis() - samplingStartTime)
+    
     #Module 2
     range = None
     anchorID = None
@@ -80,18 +84,22 @@ def loop():
     d2[1] = None
     d2[2] = None
     samplingStartTime = millis()
-    while((millis() - samplingStartTime) < SAMPLING_TIME) & ((d2[0] == None) | (d2[1] == None) | (d2[2] == None)):
+    while((d2[0] == None) | (d2[1] == None) | (d2[2] == None)): #(millis() - samplingStartTime) < SAMPLING_TIME) & 
         range = module2.loop()
         anchorID = module2.getCurrentAnchorID()
         if(range != None):
+            print("module2")
             d2[anchorID] = range
             range = None
             anchorID = None
+    print(millis() - samplingStartTime)
     module2.idle()
-    
+    #time.sleep(0.2)
+    #module1.receiver()
+    """
     #Filter module 1
     if ((d1[0] != None) & (d1[1] != None) & (d1[2] != None)):
-        print(millis() - dt1)
+        #print(millis() - dt1)
         pf1.predict(millis() - dt1)
         dt1 = millis()
         pf1.update(d1)
@@ -105,6 +113,7 @@ def loop():
         pf2.update(d2)
         posFiltered2 = pf2.estimate()
         pf2.resample()
+    """
     
 def calculatePosition(values):
     """
