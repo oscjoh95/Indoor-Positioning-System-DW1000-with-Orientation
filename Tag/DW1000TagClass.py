@@ -121,7 +121,6 @@ class DW1000Tag():
         Callback invoked on the rising edge of the interrupt pin.
         Handle the configured interruptions.
         """
-        print("Interrupt")
         self.readBytes(C.SYS_STATUS, C.NO_SUB, self._sysstatus, 5)
         self.msgReceived = self.getBit(self._sysstatus, 5, C.RXFCG_BIT)
         self.receiveTimeStampAvailable = self.getBit(self._sysstatus, 5, C.LDEDONE_BIT)
@@ -129,6 +128,7 @@ class DW1000Tag():
         if self.transmitDone:
             self.callbacks["handleSent"]()
             self.clearTransmitStatus()
+        """
         if self.receiveTimeStampAvailable:
             self.setBit(self._sysstatus, 5, C.LDEDONE_BIT, True)
             self.writeBytes(C.SYS_STATUS, C.NO_SUB, self._sysstatus, 5)
@@ -142,7 +142,8 @@ class DW1000Tag():
             if self._permanentReceive:
                 self.newReceive()
                 self.startReceive()
-        elif self.msgReceived:
+        """
+        if self.msgReceived:
             self.callbacks["handleReceived"]()
             self.clearReceiveStatus()
             if self._permanentReceive:
@@ -1568,6 +1569,7 @@ class DW1000Tag():
         """
         Resets the module and transmits a new poll
         """
+        self.clearAllStatus()
         self.receiver()
         self.noteActivity()
         self.transmitPoll()

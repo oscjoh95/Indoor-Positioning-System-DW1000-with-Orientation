@@ -34,6 +34,16 @@ ANCHOR3 = (5,10) #Adjust when anchors placed
 ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
 SAMPLING_TIME = 239 #In ms
 samplingStartTime = 0
+measX1 = []
+measY1 = []
+measX2 = []
+measY2 = []
+filtX1 = []
+filtY1 = []
+filtX2 = []
+filtY2 = []
+times = []
+
 
 #Particle Filter
 anchors = np.array([[0, 0],[10, 0],[5, 10]])
@@ -73,9 +83,6 @@ def loop():
             range = None
             anchorID = None
     module1.idle()
-    #time.sleep(0.2)
-    #module2.receiver()
-    #print(millis() - samplingStartTime)
     
     #Module 2
     range = None
@@ -94,15 +101,13 @@ def loop():
             anchorID = None
     print(millis() - samplingStartTime)
     module2.idle()
-    #time.sleep(0.2)
-    #module1.receiver()
-    """
+    
     #Filter module 1
     if ((d1[0] != None) & (d1[1] != None) & (d1[2] != None)):
         #print(millis() - dt1)
         pf1.predict(millis() - dt1)
         dt1 = millis()
-        pf1.update(d1)
+        measurement1 = pf1.update(d1)
         posFiltered1 = pf1.estimate()
         pf1.resample()
         
@@ -110,10 +115,20 @@ def loop():
     if ((d2[0] != None) & (d2[1] != None) & (d2[2] != None)):
         pf2.predict(millis() - dt2)
         dt2 = millis()
-        pf2.update(d2)
+        measurement2 = pf2.update(d2)
         posFiltered2 = pf2.estimate()
         pf2.resample()
-    """
+    
+    #Save measurements and filtered positions
+    measX1.append(measurement1[0])
+    measY1.append(measurement1[1])
+    measX2.append(measurement2[0])
+    measY2.append(measurement2[1])
+    filtX1.append(posFiltered1[0])
+    filtY1.append(posFiltered1[1])
+    filtX2.append(posFiltered2[0])
+    filtY2.append(posFiltered2[1])
+    times.append(int(round(time.time() * 1000)))
     
 def calculatePosition(values):
     """
@@ -145,11 +160,20 @@ def millis():
     return int(round(monotonic.monotonic() * C.MILLISECONDS))
     
 def main():
+    global measX1, measY1, measX2, measY2, filtX1, filtY1, filtX2, filtY2, times
     try:
         while 1:
             dt1 = millis()
             loop()
     except KeyboardInterrupt:
-        print('Interrupted by user')
+        #Save measured and filtered data to a text file on ctrl+c
+        for i in range(len(times)-1):
+            times[(len(times)-1)-i] -= times[0]
+        times[0] = 0.0
+        
+        data = np.vstack((measX1,measY1,measX2,measY2,filtX1,filtY1,filtX2,filtY2,times))
+        data = data.T
+        np.savetxt('test',data,delimiter=' ',fmt='%.4f', comments='')
+        print('Saved data to test.txt')
 if __name__ == '__main__':
     main()

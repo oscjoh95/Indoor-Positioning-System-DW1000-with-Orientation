@@ -18,7 +18,7 @@ sigmaSensor = 0.30
 if KALMAN == 1:
     initialGuess = (2.0,2.0)
     initialMaxError = 0.0
-    phi = 0.00001
+    phi = 0.005
     kalman = KalmanFilter(initialGuess[0], initialGuess[1], initialMaxError, sigmaSensor, phi) #Px, Py, Initial Max Position Error, Sigma Sensor
 
 #Create position values 
@@ -52,11 +52,11 @@ filteredX = [0.0]*LENGTH
 filteredY = [0.0]*LENGTH
 for i in range(LENGTH):
     if KALMAN == 1:
-        filteredX[i],filteredY[i] = kalman.filter((measurementX[i],measurementY[i]), 3.0)
+        filteredX[i],filteredY[i] = kalman.filter((measurementX[i],measurementY[i]), 0.2)
     
     if PF == 1:
         start = time.time()
-        pf.predict(3.0)
+        pf.predict(0.2)
         z2 = pf.updateTest(measurementX[i],measurementY[i])
         filteredX[i],filteredY[i] = pf.estimate()
         pf.resample()
