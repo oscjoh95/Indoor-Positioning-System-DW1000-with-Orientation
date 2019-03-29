@@ -20,9 +20,10 @@ function analysisPathDualTag(measurements,truePath,anchorPos)
     posBackTagFiltered = measurements(:,7:8);
 
     %Timers
-    %deltaTime = measurements(:,5);
-    deltaTime = ones(length(measurements(:,1)),1).*0.25;
-    cumTime = cumsum(deltaTime);
+    cumTime = measurements(:,9)./1000;
+    for i = 1 : length(cumTime)-1
+        deltaTime(i) = cumTime(i+1)-cumTime(i);
+    end
     
     %Orientation
     orientation = atan2((posFrontTag(:,2)-posBackTag(:,2)),(posFrontTag(:,1)-posBackTag(:,1)));
@@ -49,13 +50,18 @@ function analysisPathDualTag(measurements,truePath,anchorPos)
     pathSTD = sqrt(sum((distanceError-meanError).^2)/(length(distanceError)-1));
     pathSTDFiltered = sqrt(sum((distanceErrorFiltered-meanErrorFiltered).^2)/(length(distanceErrorFiltered)-1));
 
+    %MSE
+    pathMSE = sum(distanceError.^2)/length(distanceError);
+    pathMSEFiltered = sum(distanceError.^2)/length(distanceError);
+    
     %%Table of values
-    ColumnNames = {'Mean Error'; 'STD'};
+    ColumnNames = {'Mean Error'; 'STD'; 'MSE'};
     Method = {'Unfiltered';'Filtered Filter'};
     Mean_Error =[meanError;meanErrorFiltered];
     STD = [pathSTD;pathSTDFiltered];
+    MSE = [pathMSE;pathMSEFiltered];
 
-    T = table(Mean_Error,STD,'RowNames',Method);
+    T = table(Mean_Error,STD,MSE,'RowNames',Method);
 
     uitable('Data',T{:,:},'ColumnName',ColumnNames,...
         'RowName',T.Properties.RowNames,'Units', 'Normalized', 'Position',[0, 0, 1, 1],...

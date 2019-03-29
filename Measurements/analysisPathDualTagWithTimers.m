@@ -24,8 +24,10 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     posBackTagFiltered = measurements(:,7:8);
 
     %Timers
-    deltaTime = measurements(:,9);
-    cumTime = cumsum(deltaTime);
+    cumTime = measurements(:,9)./1000;
+    for i = 1 : length(cumTime)-1
+        deltaTime(i) = cumTime(i+1)-cumTime(i);
+    end
         
     %Orientation
     orientation = atan2((posFrontTag(:,2)-posBackTag(:,2)),(posFrontTag(:,1)-posBackTag(:,1)));
@@ -33,20 +35,28 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
 
     %% Table of Error Measurements
     %Errors between measured position and true path
-    for i = 1:(length(measurements(:,1)))
+    loopCounter = 1;
+    timeCounter = 1;
+    while timeCounter <(length(measurements(:,1)))
         tempPos = [posFrontTag(i,1),posFrontTag(i,2),0];
-        tempDist = min_distance_to_time(tempPos, truePath, cumTime(i), trueTimes);
+        tempDist = min_distance_to_time(tempPos, truePath, cumTime(timeCounter), trueTimes);
+        timeCounter=timeCounter+1;
         if tempDist >= 0
-            distanceError(i) = tempDist;
+            distanceError(loopCounter) = tempDist;
+            loopCounter = loopCounter +1 ;
         end
     end
-
+    
     %Errors between measured position and true path (Filtered)
-    for i = 1:(length(measurements(:,1)))
+    loopCounter = 1;
+    timeCounter = 1;
+    while timeCounter <(length(measurements(:,1)))
         tempPos = [posFrontTagFiltered(i,1),posFrontTagFiltered(i,2),0];
-        tempDist = min_distance_to_time(tempPos, truePath, cumTime(i), trueTimes);
+        tempDist = min_distance_to_time(tempPos, truePath, cumTime(timeCounter), trueTimes);
+        timeCounter=timeCounter+1;
         if tempDist >= 0
-            distanceErrorFiltered(i) = tempDist;
+            distanceErrorFiltered(loopCounter) = tempDist;
+            loopCounter = loopCounter +1 ;
         end
     end
 
@@ -58,13 +68,18 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     pathSTD = sqrt(sum((distanceError-meanError).^2)/(length(distanceError)-1));
     pathSTDFiltered = sqrt(sum((distanceErrorFiltered-meanErrorFiltered).^2)/(length(distanceErrorFiltered)-1));
 
+    %MSE
+    pathMSE = sum(distanceError.^2)/length(distanceError);
+    pathMSEFiltered = sum(distanceError.^2)/length(distanceError);
+    
     %%Table of values
-    ColumnNames = {'Mean Error'; 'STD'};
+    ColumnNames = {'Mean Error'; 'STD'; 'MSE'};
     Method = {'Unfiltered';'Filtered Filter'};
     Mean_Error =[meanError;meanErrorFiltered];
     STD = [pathSTD;pathSTDFiltered];
+    MSE = [pathMSE;pathMSEFiltered];
 
-    T = table(Mean_Error,STD,'RowNames',Method);
+    T = table(Mean_Error,STD,MSE,'RowNames',Method);
 
     uitable('Data',T{:,:},'ColumnName',ColumnNames,...
         'RowName',T.Properties.RowNames,'Units', 'Normalized', 'Position',[0, 0, 1, 1],...
@@ -119,7 +134,7 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     anchorPlot.MarkerEdgeColor = 'red';
 
     
-    set(gcf, 'Position',  [1000, 800, 1000, 500])
+    set(gcf, 'Position',  [1000, 200, 700, 1000])
     set(gcf, 'Color',  [102/255 204/255 255/255], 'name', 'Live Graph')
     legend('Front Tag Positions','Back Tag Positions', 'Front Tag Filtered Positions','Back Tag Filtered Positions' , 'Anchor Positions','True Position');
     xlabel('x[m]');
@@ -153,7 +168,7 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     anchorPlot.MarkerEdgeColor = 'red';
 
     
-    set(gcf, 'Position',  [1000, 200, 1000, 500])
+    set(gcf, 'Position',  [1800, 200, 700, 1000])
     set(gcf, 'Color',  [102/255 204/255 255/255], 'name', 'Live Graph')
     legend('Front Tag Positions','Back Tag Positions', 'Front Tag Filtered Positions','Back Tag Filtered Positions' , 'Anchor Positions','True Position');
     xlabel('x[m]');
@@ -168,7 +183,7 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
         set(frontTagFilteredPlot,'XData',posFrontTagFiltered(i,1),'YData',posFrontTagFiltered(i,2));
         set(backTagFilteredPlot,'XData',posBackTagFiltered(i,1),'YData',posBackTagFiltered(i,2));
         drawnow
-        pause(deltaTime(i))
+        pause(deltaTime(i-1))
     end
      
 end

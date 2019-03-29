@@ -25,9 +25,10 @@ function analysisStationaryDualTag(measurements,truePos,anchorPos)
     posBackTagFiltered = measurements(:,7:8);
 
     %Timers
-    %deltaTime = measurements(:,5);
-    deltaTime = ones(length(measurements(:,1)),1).*0.25;
-    cumTime = cumsum(deltaTime);
+    cumTime = measurements(:,9)./1000;
+    for i = 1 : length(cumTime)-1
+        deltaTime(i) = cumTime(i+1)-cumTime(i);
+    end
 
     %Orientation
     orientation = atan2((posFrontTag(:,2)-posBackTag(:,2)),(posFrontTag(:,1)-posBackTag(:,1)));
@@ -65,6 +66,7 @@ function analysisStationaryDualTag(measurements,truePos,anchorPos)
     distanceSTD = sqrt(positionSTDX.^2 + positionSTDY.^2);
     distanceSTDFiltered = sqrt(positionSTDXFiltered.^2 + positionSTDYFiltered.^2);
 
+    
     %%Table of values
     ColumnNames = {'Mean Error';'STD X';'STD Y';'STD Distance'};
     Method = {'Unfiltered';'Filtered'};
@@ -105,7 +107,7 @@ function analysisStationaryDualTag(measurements,truePos,anchorPos)
     hold on;
 
     frontTagPlot = scatter(posFrontTag(:,1), posFrontTag(:,2),30,'filled');
-    backTagPlot = scatter(posBackTag(:,1), posBackTag(:,1),30,'filled');
+    backTagPlot = scatter(posBackTag(:,1), posBackTag(:,2),30,'filled');
     frontTagFilteredPlot= scatter(posFrontTagFiltered(:,1), posFrontTagFiltered(:,2),30,'filled');
     backTagFilteredPlot= scatter(posBackTagFiltered(:,1), posBackTagFiltered(:,2),30,'filled');
     

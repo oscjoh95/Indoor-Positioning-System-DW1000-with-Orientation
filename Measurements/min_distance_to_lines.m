@@ -1,8 +1,6 @@
 
 %Euclidean distance from point to Line
 %  
-
-
 function d = min_distance_to_lines(pt, truePath)
     for i = 1:(length(truePath(:,1))-1)
         lines(i,:) = [linspace(truePath(i,1),truePath(i+1,1),1000),linspace(truePath(i,2),truePath(i+1,2),1000)];  
