@@ -119,6 +119,10 @@ def loop():
         posFiltered2 = pf2.estimate()
         pf2.resample()
     
+    #Orientation Calculations
+    orientation = np.arctan2(posFiltered1[1] - posFiltered2[1], posFiltered1[0] - posFiltered2[0])
+    print(orientation)
+    
     #Save measurements and filtered positions
     measX1.append(measurement1[0])
     measY1.append(measurement1[1])
@@ -173,7 +177,7 @@ def main():
         
         data = np.vstack((measX1,measY1,measX2,measY2,filtX1,filtY1,filtX2,filtY2,times))
         data = data.T
-        np.savetxt('test',data,delimiter=' ',fmt='%.4f', comments='')
+        np.savetxt('test',data,delimiter=' ',fmt='%.4f', comments='', header='MeasX0 MeasY0 MeasX1 MeasY1 FiltX0 FiltY0 FiltX1 FiltY1 Time')
         print('Saved data to test.txt')
 if __name__ == '__main__':
     main()
