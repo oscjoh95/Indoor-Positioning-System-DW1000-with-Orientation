@@ -16,9 +16,13 @@
 #define SPIN_CW   2
 #define SPIN_CCW  3
 
-//Other Sonstants
-#define SPEED
-#define TURNING_SPEED         //TODO: Add reasonable numbers here
+#define SLOW        64
+#define MEDIUM      127
+#define FAST        191
+#define SUPER_FAST  255
+
+//Other Constants
+#define ROBOT_WIDTH 19  //In cm
 
 int newReadingA = 0;
 int oldReadingA;
@@ -56,39 +60,49 @@ void setup() {
 
 void loop() {
   //Program path here
+
+  /*
+  Example:
+  drive(100, FORWARD);
+  delay(1000);
+  spin(PI/2, SPIN_CCW);
+  delay(1000);
+  spin(PI/2, SPIN_CW)
+  delay(1000);
+  moveForward(100, BACKWARD);
+  */
 }
 
-//Moves the robot forward a given distance
-void moveForward(double distance){
+//Moves the robot a given distance in cm backwards or forwards
+void drive(double distance, int moveDirection){
   if(distance > 0){
     counterA = 0;
-    motorsOn(FORWARD, SPEED); //Turn on motors
+    motorsOn(moveDirection, MEDIUM); //Turn on motors
     while(getPositionA() < distance){
       //Do nothing until distance has been travelled
     }
     motorsOff(); //Turn off motors
   }else{
-    Serial.println("Error: The distance to move forward has to be larger than zero");  
+    Serial.println("Error: The distance to move has to be larger than zero");  
     return;
   }
 }
 
-//Moves the robot backward a given distance
-void moveBackward(double distance){
-  if(distance > 0){
+//Spins the robot a given amount of radians clockwise or counterclockwise
+void spin(double theta, int spinDirection){
+  if(theta > 0){
+    double endDistance = radiansToDistance(theta);
     counterA = 0;
-    motorsOn(BACKWARD, SPEED); //Turn on motors
-    while(getPositionA() < distance){
-      //Do nothing until distance has been travelled
+    motorsOn(spinDirection, MEDIUM); //Turn on motors
+    while(getPositionA() < endDistance){
+      //Do nothing until spin has finished
     }
-    motorsOff(); //Turn off motors
+    motorsOff();
   }else{
-    Serial.println("Error: The distance to move backward has to be larger than zero");  
+    Serial.println("Error: Radians to spin has to be larger than zero");
     return;
-  }  
+  }
 }
-
-//TODO: Add code to turn a set amount of degrees
 
 //Function to start the motors to go in a given direction with speed pwmSpeed
 void motorsOn(int movement, int pwmSpeed){
@@ -151,6 +165,7 @@ void motorsOff(){
   analogWrite(PWM_B, HIGH);
 }
 
+/*Unused as of now
 //Direction
 int getDirectionA(){
   oldReadingA = newReadingA;
@@ -166,6 +181,7 @@ int getDirectionB(){
     dirB = QEM[oldReadingB*4 + newReadingB];
   }
 }
+*/
 
 //Position
 double getPositionA(){
@@ -173,6 +189,11 @@ double getPositionA(){
 }
 double getPositionB(){
   return counterB * 6.3*PI*3.0/250.0;//Circumference of wheel is 6.3*pi cm and 3/250 pulses per wheel rotation
+}
+
+//Convert spin in radians to distance 
+double radiansToDistance(double rotation){
+  return rotation/2*ROBOT_WIDTH;
 }
 
 //Interrupt functions
