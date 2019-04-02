@@ -1,14 +1,22 @@
 //Pin Numbers
-#define S1_A 12
-#define S2_A 18
-#define S1_B 11
-#define S2_B 19
-#define PWM_A  3
-#define DIR_A0 4
-#define DIR_A1 5
-#define PWM_B  6
-#define DIR_B0 7
-#define DIR_B1 8
+#define S1_A        12
+#define S2_A        18
+#define S1_B        11
+#define S2_B        19
+#define PWM_A       3
+#define DIR_A0      4
+#define DIR_A1      5
+#define PWM_B       6
+#define DIR_B0      7
+#define DIR_B1      8
+
+#define LED1        22
+#define LED2        24
+#define LED3        26
+#define BUTTON1     28
+#define BUTTON2     30
+#define BUTTON3     32
+#define RUN_BUTTON  34
 
 //Movement constants
 #define FORWARD   0
@@ -35,6 +43,8 @@ double distanceA = 0;
 double distanceB = 0;
 unsigned long counterA;
 unsigned long counterB;
+int program  = 1;
+boolean runProgram = false;
 
 void setup() {
   //Setup serial communication
@@ -55,12 +65,28 @@ void setup() {
   //Setup interrupts for counting pulses
   attachInterrupt(digitalPinToInterrupt(S2_A), countPulsesA, RISING);
   attachInterrupt(digitalPinToInterrupt(S2_B), countPulsesB, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON1), p1, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON2), p2, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON3), p3, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RUN_BUTTON), runPath, FALLING);
 }
 
 
 void loop() {
-  //Program path here
-
+  
+  if(runProgram){
+    delay(1000);
+    switch(program){
+      case 1:
+        //Program path 1 here
+      case 2:
+        //Program path 2 here
+      case 3:
+        //Program path 3 here
+      default:
+        Serial.println("Error: Invalid program");
+    }
+  }
   /*
   Example:
   drive(100, FORWARD);
@@ -202,4 +228,25 @@ void countPulsesA(){
 }
 void countPulsesB(){
   counterB++;
+}
+void p1(){
+  program = 1;
+  digitalWrite(LED1, HIGH);
+  digitalWrite(LED2, LOW);
+  digitalWrite(LED3, LOW);
+}
+void p2(){
+  program = 2;
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, HIGH);
+  digitalWrite(LED3, LOW);
+}
+void p3(){
+  program = 3;
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
+  digitalWrite(LED3, HIGH);  
+}
+void runPath(){
+  runProgram = true;
 }
