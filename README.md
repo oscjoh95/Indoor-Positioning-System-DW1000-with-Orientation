@@ -3,9 +3,9 @@ Master Thesis
 
 Authors: 
 
-Oscar Johansson @orjn01
+Oscar Johansson [@oscjoh95](https://github.com/oscjoh95)
 
-Lucas Wassenius @lucaswassenius
+Lucas Wassenius [@lucaswassenius](https://github.com/lucaswassenius)
 
 ## Introduction
 The thesis project's aim is to find evaluate a dual tag setup of UWB-modules, in a indoor positioning system, 
