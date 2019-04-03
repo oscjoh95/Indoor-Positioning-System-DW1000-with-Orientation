@@ -24,7 +24,9 @@ the devices. See image below to understand the communication flow between Anchor
 
 ### Trilateration
 
-### Particle Filter
+### Filters
+There are two filters included in the repository written in python. These can be used in the tag program running on raspberry pi to filter the measurements. To apply the filter just change the constant FILTER in the tag class to correspond to the filter you want to use. 
+The filters included are a Kalman filter and a sequential importance resampling particle filter. The filters require tuning to be optimized for different setups and movement patterns of the tags. It should be enough to tweak the parameters under the corresponding filter section at the top of the tag.py file. 
 
 ## Installation Anchor
 1. Download the library file "arduino-dw1000-Library.zip" from the Anchor Folder.
