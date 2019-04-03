@@ -24,10 +24,9 @@
 #define SPIN_CW   2
 #define SPIN_CCW  3
 
-#define SLOW        64
-#define MEDIUM      127
-#define FAST        191
-#define SUPER_FAST  255
+#define SLOW        204 //~80 % duty cycle
+#define MEDIUM      230 //~90 % duty cycle
+#define FAST        255 //~100 % duty cycle
 
 //Other Constants
 #define ROBOT_WIDTH   19  //In cm
@@ -66,34 +65,62 @@ void setup() {
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
-  pinMode(BUTTON1, OUTPUT);
-  pinMode(BUTTON2, OUTPUT);
-  pinMode(BUTTON3, OUTPUT);
-  pinMode(RUN_BUTTON, OUTPUT);
+  pinMode(BUTTON1, INPUT_PULLUP);
+  pinMode(BUTTON2, INPUT_PULLUP);
+  pinMode(BUTTON3, INPUT_PULLUP);
+  pinMode(RUN_BUTTON, INPUT_PULLUP);
 
+  digitalWrite(LED1, HIGH);
+  digitalWrite(LED2, LOW);
+  digitalWrite(LED3, LOW);
+
+  
   //Setup interrupts for counting pulses
   attachInterrupt(digitalPinToInterrupt(S2_A), countPulsesA, RISING);
   attachInterrupt(digitalPinToInterrupt(S2_B), countPulsesB, RISING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON1), p1, FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON2), p2, FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON3), p3, FALLING);
-  attachInterrupt(digitalPinToInterrupt(RUN_BUTTON), runPath, FALLING);
 }
 
 
 void loop() {
-  
-  if(runProgram){
+  if(digitalRead(BUTTON1) == LOW){
+    program = 1;
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED2, LOW);
+    digitalWrite(LED3, LOW);
+    while(digitalRead(BUTTON1) == LOW){  
+    }
+  }
+  else if(digitalRead(BUTTON2) == LOW){
+    program = 2;
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, HIGH);
+    digitalWrite(LED3, LOW);
+    while(digitalRead(BUTTON2) == LOW){
+    }
+  }
+  else if(digitalRead(BUTTON3) == LOW){
+    program = 3;
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, LOW);
+    digitalWrite(LED3, HIGH);
+    while(digitalRead(BUTTON3) == LOW){
+    }
+  }
+  else if(digitalRead(RUN_BUTTON) == LOW){
+    while(digitalRead(RUN_BUTTON) == LOW){
+    }
     delay(1000);
     switch(program){
       case 1:
         //Program path 1 here
-        drive(20, FORWARD); //Test program
+        Serial.println("Running Path 1");
         break;
       case 2:
         //Program path 2 here
+        Serial.println("Running Path 2");
       case 3:
         //Program path 3 here
+        Serial.println("Running Path 3");
       default:
         Serial.println("Error: Invalid program");
     }
@@ -258,6 +285,7 @@ void p3(){
   digitalWrite(LED2, LOW);
   digitalWrite(LED3, HIGH);  
 }
+
 void runPath(){
-  runProgram = true;
+  program = 1;
 }
