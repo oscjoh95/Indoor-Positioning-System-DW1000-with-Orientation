@@ -38,7 +38,7 @@ Note. 5V Arduinos can not supply 3.3V to the DW1000 Chip as the current is limit
 
 ## Installation Tag
 1. Download the files from the tag folder to your raspberry pi. 
-2. Verify that the constants under the setup section are correct.
+2. Verify that the constants under the setup section in tag.py are correct.
 3. Compile and run
 
 ## Project State
