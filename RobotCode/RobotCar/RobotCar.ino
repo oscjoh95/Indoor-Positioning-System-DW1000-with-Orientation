@@ -89,6 +89,7 @@ void loop() {
       case 1:
         //Program path 1 here
         drive(20, FORWARD); //Test program
+        break;
       case 2:
         //Program path 2 here
       case 3:
