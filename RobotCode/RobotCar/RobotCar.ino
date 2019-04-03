@@ -30,7 +30,8 @@
 #define SUPER_FAST  255
 
 //Other Constants
-#define ROBOT_WIDTH 19  //In cm
+#define ROBOT_WIDTH   19  //In cm
+#define TURNING_COEFF 1
 
 int newReadingA = 0;
 int oldReadingA;
@@ -62,6 +63,14 @@ void setup() {
   pinMode(DIR_B0, OUTPUT);
   pinMode(DIR_B1, OUTPUT);
 
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(BUTTON1, OUTPUT);
+  pinMode(BUTTON2, OUTPUT);
+  pinMode(BUTTON3, OUTPUT);
+  pinMode(RUN_BUTTON, OUTPUT);
+
   //Setup interrupts for counting pulses
   attachInterrupt(digitalPinToInterrupt(S2_A), countPulsesA, RISING);
   attachInterrupt(digitalPinToInterrupt(S2_B), countPulsesB, RISING);
@@ -79,6 +88,7 @@ void loop() {
     switch(program){
       case 1:
         //Program path 1 here
+        drive(20, FORWARD); //Test program
       case 2:
         //Program path 2 here
       case 3:
@@ -219,7 +229,7 @@ double getPositionB(){
 
 //Convert spin in radians to distance 
 double radiansToDistance(double rotation){
-  return rotation/2*ROBOT_WIDTH;
+  return rotation/2*ROBOT_WIDTH*TURNING_COEFF;
 }
 
 //Interrupt functions
