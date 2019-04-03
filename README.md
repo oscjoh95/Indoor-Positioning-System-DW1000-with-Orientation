@@ -37,7 +37,9 @@ Note. 5V Arduinos can not supply 3.3V to the DW1000 Chip as the current is limit
 5. Program the Arduino with the latest version of Anchor Code.
 
 ## Installation Tag
-
+1. Download the files from the tag folder to your raspberry pi. 
+2. Verify that the constants under the setup section are correct.
+3. Compile and run
 
 ## Project State
 In the current version of the project two tags can be positioned with an approximate sampling frequency of 4-5 positions/s for each tag. 
