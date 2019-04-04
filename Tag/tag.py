@@ -15,12 +15,19 @@ from math import *
 import monotonic
 from ParticleFilter import *
 
+#Setup
 CS1 = 12
 CS2 = 5
 IRQ1 = 6
 IRQ2 = 26
 ANTENNA_DELAY1 = 16368
 ANTENNA_DELAY2 = 16368
+ANCHOR1 = (0,0)  #Adjust when anchors placed
+ANCHOR2 = (10,0) #Adjust when anchors placed
+ANCHOR3 = (5,10) #Adjust when anchors placed
+FILTER = 2 #No Filter=0, Particle Filter=1, Kalman=2
+
+#Other constants and variables
 startupTime = 1.0
 DATA_LEN = 17
 data = [0] * 5
@@ -28,11 +35,6 @@ d1 = [0] * 3
 d2 = [0] * 3
 dt1 = 0
 dt2 = 0
-ANCHOR1 = (0,0)  #Adjust when anchors placed
-ANCHOR2 = (10,0) #Adjust when anchors placed
-ANCHOR3 = (5,10) #Adjust when anchors placed
-ANCHOR_LEVEL = 0 #Floor = 0, Ceiling = 1
-SAMPLING_TIME = 239 #In ms
 samplingStartTime = 0
 measX1 = []
 measY1 = []
@@ -46,13 +48,31 @@ times = []
 
 
 #Particle Filter
-anchors = np.array([[0, 0],[10, 0],[5, 10]])
+anchors = np.array([[ANCHOR1[0], ANCHOR1[1]],[ANCHOR2[0], ANCHOR2[1]],[ANCHOR3[0], ANCHOR3[1]]])
 sigma = 0.9
 vstd = 0.1
 hstd = 0.2
-pf1 = ParticleFilter(500,10,10, anchors, sigma, vstd, hstd)
-pf2 = ParticleFilter(500,10,10, anchors, sigma, vstd, hstd)
 
+#Kalman Filter
+xInit1 = 0
+yInit1 = 0
+xInit2 = 0
+yInit2 = 0
+initPosError1 = 0
+initPosError2 = 0
+sigmaSensor = 0.09
+covarianceCoeff = 1
+
+
+#Initialize Filters
+if (FILTER == 1):
+    pf1 = ParticleFilter(500,10,10, anchors, sigma, vstd, hstd)
+    pf2 = ParticleFilter(500,10,10, anchors, sigma, vstd, hstd)
+elif (FILTER == 2): 
+    kalman1 = KalmanFilter(xInit1, yInit1, initPosError1, sigmaSensor, covarianceCoeff)
+    kalman2 = KalmanFilter(xInit2, yInit2, initPosError2, sigmaSensor, covarianceCoeff)
+
+#Initialize Modules
 module1 = DW1000Tag("module1", CS1, IRQ1, ANTENNA_DELAY1, "82:17:5B:D5:A9:9A:E2:1A", DATA_LEN)
 module1.idle()
 print("\n")
@@ -72,13 +92,11 @@ def loop():
     d1[0] = None
     d1[1] = None
     d1[2] = None
-    #module1.receiver()
-    samplingStartTime = millis()
-    while((d1[0] == None) | (d1[1] == None) | (d1[2] == None)): #(millis() - samplingStartTime) < SAMPLING_TIME) & 
+    while((d1[0] == None) | (d1[1] == None) | (d1[2] == None)):
         range = module1.loop()
         anchorID = module1.getCurrentAnchorID()
         if(range != None):
-            print("module1")
+            #print("module1")
             d1[anchorID] = range
             range = None
             anchorID = None
@@ -90,35 +108,48 @@ def loop():
     d2[0] = None
     d2[1] = None
     d2[2] = None
-    samplingStartTime = millis()
-    while((d2[0] == None) | (d2[1] == None) | (d2[2] == None)): #(millis() - samplingStartTime) < SAMPLING_TIME) & 
+    while((d2[0] == None) | (d2[1] == None) | (d2[2] == None)): 
         range = module2.loop()
         anchorID = module2.getCurrentAnchorID()
         if(range != None):
-            print("module2")
+            #print("Module2")
             d2[anchorID] = range
             range = None
             anchorID = None
-    print(millis() - samplingStartTime)
     module2.idle()
     
-    #Filter module 1
-    if ((d1[0] != None) & (d1[1] != None) & (d1[2] != None)):
-        #print(millis() - dt1)
-        pf1.predict(millis() - dt1)
-        dt1 = millis()
-        measurement1 = pf1.update(d1)
-        posFiltered1 = pf1.estimate()
-        pf1.resample()
+    #Particle Filter
+    if (FILTER == 1):
+        #Filter module 1
+        if ((d1[0] != None) & (d1[1] != None) & (d1[2] != None)):
+            pf1.predict(millis() - dt1)
+            dt1 = millis()
+            measurement1 = pf1.update(d1)
+            posFiltered1 = pf1.estimate()
+            pf1.resample()
         
-    #Filter module 2
-    if ((d2[0] != None) & (d2[1] != None) & (d2[2] != None)):
-        pf2.predict(millis() - dt2)
-        dt2 = millis()
-        measurement2 = pf2.update(d2)
-        posFiltered2 = pf2.estimate()
-        pf2.resample()
+        #Filter module 2
+        if ((d2[0] != None) & (d2[1] != None) & (d2[2] != None)):
+            pf2.predict(millis() - dt2)
+            dt2 = millis()
+            measurement2 = pf2.update(d2)
+            posFiltered2 = pf2.estimate()
+            pf2.resample()
     
+    #Kalman Filter
+    if (FILTER == 2):
+        #Filter module 1
+        if ((d1[0] != None) & (d1[1] != None) & (d1[2] != None)):
+            measurement1 = calculatePosition((d1[0], d1[1], d1[2]))
+            posFiltered1 = kalman1.filter((measurement1[0],measurement1[1]), millis() - dt1)
+            dt1 = millis()
+        
+        #Filter module 2
+        if ((d2[0] != None) & (d2[1] != None) & (d2[2] != None)):
+            measurement2 = calculatePosition((d2[0], d2[1], d2[2]))
+            posFiltered2 = kalman2.filter((measurement2[0],measurement2[1]), millis() - dt2)
+            dt2 = millis()   
+            
     #Orientation Calculations
     orientation = np.arctan2(posFiltered1[1] - posFiltered2[1], posFiltered1[0] - posFiltered2[0])
     print(orientation)
@@ -145,16 +176,8 @@ def calculatePosition(values):
     #Calculate coordinates
     Px = (d1*d1 - d2*d2 + delta2x*delta2x)/(2*delta2x)
     Py = (d1*d1 - d3*d3 + delta3x*delta3x + delta3y*delta3y - 2*delta3x*Px)/(2*delta3y)
-    if((d1*d1 - Px*Px - Py*Py) > 0):
-        Pz = sqrt(d1*d1 - Px*Px - Py*Py)
-    else:
-        Pz = 0
         
-    #Negative z if anchors are placed in the ceiling
-    if(ANCHOR_LEVEL == 1):
-        Pz = -Pz
-        
-    position = Px,Py,Pz
+    position = Px,Py
     return position
 
 def millis():
