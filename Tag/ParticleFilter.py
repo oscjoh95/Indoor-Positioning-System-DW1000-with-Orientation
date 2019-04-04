@@ -54,7 +54,7 @@ class ParticleFilter():
         """
         x = (z[0]**2 - z[1]**2 + self.anchors[1][0]**2)/(2*self.anchors[1][0])
         y = (z[0]**2 - z[2]**2 + self.anchors[2][0]**2 + self.anchors[2][1]**2 - 2*self.anchors[2][0]*x)/(2*self.anchors[2][1])
-        
+
         dist = np.linalg.norm(self.particles[:,0:2] - (x,y), axis = 1)
         
         self.weights *= sp.stats.norm(0, self.measImp).pdf(dist)

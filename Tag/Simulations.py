@@ -1,5 +1,5 @@
 """
-tagTest.py
+Simulations.py
 Oscar Johansson, Lucas Wassénius
 Main file for the tags that are controlled by a raspberry pi. It alternates sampling between the two
 tags to keep the distances up to date.
@@ -45,7 +45,7 @@ filtY1 = []
 filtX2 = []
 filtY2 = []
 times = []
-
+i = 0
 
 #Particle Filter
 anchors = np.array([[ANCHOR1[0], ANCHOR1[1]],[ANCHOR2[0], ANCHOR2[1]],[ANCHOR3[0], ANCHOR3[1]]])
@@ -72,70 +72,44 @@ elif (FILTER == 2):
     kalman1 = KalmanFilter(xInit1, yInit1, initPosError1, sigmaSensor, covarianceCoeff)
     kalman2 = KalmanFilter(xInit2, yInit2, initPosError2, sigmaSensor, covarianceCoeff)
 
-#Initialize Modules
-module1 = DW1000Tag("module1", CS1, IRQ1, ANTENNA_DELAY1, "82:17:5B:D5:A9:9A:E2:1A", DATA_LEN)
-module1.idle()
-print("\n")
-time.sleep(startupTime)
-
-module2 = DW1000Tag("module2", CS2, IRQ2, ANTENNA_DELAY2, "82:17:5B:D5:A9:9A:E2:1B", DATA_LEN)
-module2.idle()
-print("\n")
-time.sleep(startupTime)
-
 def loop():
-    global dt1, dt2
+    global dt1, dt2, i
     
     #Module 1
-    range = None
-    anchorID = None
     d1[0] = None
     d1[1] = None
     d1[2] = None
-    while((d1[0] == None) | (d1[1] == None) | (d1[2] == None)):
-        range = module1.loop()
-        anchorID = module1.getCurrentAnchorID()
-        if(range != None):
-            #print("module1")
-            d1[anchorID] = range
-            range = None
-            anchorID = None
-    module1.idle()
+    trueX = 2+i/20
+    trueY = 2
+    d1[0] = math.sqrt(trueX**2+trueY**2) + np.random.normal(0,0.09)
+    d1[1] = math.sqrt((trueX-ANCHOR2[0])**2 + trueY**2) + np.random.normal(0,0.09)
+    d1[2] = math.sqrt((trueX-ANCHOR3[0])**2+(trueY-ANCHOR3[1])**2) + np.random.normal(0,0.09)
     
     #Module 2
-    range = None
-    anchorID = None
-    d2[0] = None
-    d2[1] = None
-    d2[2] = None
-    while((d2[0] == None) | (d2[1] == None) | (d2[2] == None)): 
-        range = module2.loop()
-        anchorID = module2.getCurrentAnchorID()
-        if(range != None):
-            #print("Module2")
-            d2[anchorID] = range
-            range = None
-            anchorID = None
-    module2.idle()
-    
+    trueX = 2.3+i/20
+    trueY = 2
+    d2[0] = math.sqrt(trueX**2+trueY**2) + np.random.normal(0,0.09)
+    d2[1] = math.sqrt((trueX-ANCHOR2[0])**2 + trueY**2) + np.random.normal(0,0.09)
+    d2[2] = math.sqrt((trueX-ANCHOR3[0])**2+(trueY-ANCHOR3[1])**2) + np.random.normal(0,0.09)
+
+    i = i+1
+    print(i)
     #Particle Filter
     if (FILTER == 1):
         #Filter module 1
-        if ((d1[0] != None) & (d1[1] != None) & (d1[2] != None)):
-            pf1.predict(millis() - dt1)
-            dt1 = millis()
-            measurement1 = pf1.update(d1)
-            posFiltered1 = pf1.estimate()
-            pf1.resample()
+        pf1.predict(millis() - dt1)
+        dt1 = millis()
+        measurement1 = pf1.update(d1)
+        posFiltered1 = pf1.estimate()
+        pf1.resample()
         
         #Filter module 2
-        if ((d2[0] != None) & (d2[1] != None) & (d2[2] != None)):
-            pf2.predict(millis() - dt2)
-            dt2 = millis()
-            measurement2 = pf2.update(d2)
-            posFiltered2 = pf2.estimate()
-            pf2.resample()
-    
+        pf2.predict(millis() - dt2)
+        dt2 = millis()
+        measurement2 = pf2.update(d2)
+        posFiltered2 = pf2.estimate()
+        pf2.resample()
+
     #Kalman Filter
     if (FILTER == 2):
         #Filter module 1
@@ -204,3 +178,4 @@ def main():
         print('Saved data to test.txt')
 if __name__ == '__main__':
     main()
+
