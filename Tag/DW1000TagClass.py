@@ -1554,7 +1554,6 @@ class DW1000Tag():
         """
         Callback for message received. Sets the receivedAck variable true to take action in the loop
         """
-        #print("Received")
         self.receivedAck = True
     
     def receiver(self):
@@ -1583,8 +1582,7 @@ class DW1000Tag():
         ts = self.setDelay(self.REPLY_DELAY_TIME_US, C.MICROSECONDS)   
         self.setTimeStamp(self.data, ts, 1)
         self.setData(self.data, self.DATA_LEN)
-        self.startTransmit()  
-        print("Poll sent")
+        self.startTransmit()
        
     def transmitFinal(self):
         """
@@ -1630,7 +1628,6 @@ class DW1000Tag():
         if(self.receivedAck):
             self.data = self.getData(self.DATA_LEN)
             self.msgID = self.data[0]
-            print(self.data)
             if(self.msgID == C.POLL_ACK): 
                 self.setTimeStamp(self.data, self.getReceiveTimestamp(), 6)
                 self.transmitFinal()
@@ -1638,9 +1635,7 @@ class DW1000Tag():
                 self.computedTime = self.getTimeStamp(self.data,1) #The time of flight computed in anchor is stored at position 1
                 self.distance = (self.computedTime % C.TIME_OVERFLOW) * C.DISTANCE_OF_RADIO
                 self.currentAnchorID = self.data[16]
-                #print(self.data)
-                #if(self.currentAnchorID>2):
-                print("Distance: %.2f m" %(self.distance))
+                print("Distance: %.2f m to anchor %d" %(self.distance, self.currentAnchorID))
                 self.receivedAck = False
                 return self.distance
             self.receivedAck = False
