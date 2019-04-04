@@ -118,9 +118,11 @@ void loop() {
       case 2:
         //Program path 2 here
         Serial.println("Running Path 2");
+        break;
       case 3:
         //Program path 3 here
         Serial.println("Running Path 3");
+        break;
       default:
         Serial.println("Error: Invalid program");
     }
@@ -266,26 +268,4 @@ void countPulsesA(){
 }
 void countPulsesB(){
   counterB++;
-}
-void p1(){
-  program = 1;
-  digitalWrite(LED1, HIGH);
-  digitalWrite(LED2, LOW);
-  digitalWrite(LED3, LOW);
-}
-void p2(){
-  program = 2;
-  digitalWrite(LED1, LOW);
-  digitalWrite(LED2, HIGH);
-  digitalWrite(LED3, LOW);
-}
-void p3(){
-  program = 3;
-  digitalWrite(LED1, LOW);
-  digitalWrite(LED2, LOW);
-  digitalWrite(LED3, HIGH);  
-}
-
-void runPath(){
-  program = 1;
 }
