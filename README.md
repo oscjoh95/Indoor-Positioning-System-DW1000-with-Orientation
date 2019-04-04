@@ -1,5 +1,5 @@
 # Indoor Positioning System
-Master Thesis
+This is the repository for an indoor positioning system developed during our master thesis project. This master thesis investigated the feasibility of using the relative position between two tags located on the same robot to find the orientation of said robot. The code in the repository are meant to be used for two tags. It's possible to use the repository as a library for a system with only one tag. In this case only the tag.py file should have to be modified. All other files should be able to be used as is.
 
 Authors: 
 
