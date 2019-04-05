@@ -51,18 +51,28 @@ function analysisStationaryDualTag(measurements,truePos,trueOrientation,anchorPo
     errorY = trueY - posFrontTag(:,2);
     errorXFiltered = trueX - posFrontTagFiltered(:,1);
     errorYFiltered = trueY - posFrontTagFiltered(:,2);
-    errorOrient = trueOrientation - orientation;
-    errorOrientFiltered = trueOrientation - orientationFiltered;
+    absoluteErrorOrient = abs(trueOrientation - orientation);
+    absoluteErrorOrientFiltered = abs(trueOrientation - orientationFiltered);
+    
+    %Mean Errors X,Y
+    meanErrorX = mean(errorX);
+    meanErrorY = mean(errorY);
+    meanErrorXFiltered = mean(errorXFiltered);
+    meanErrorYFiltered = mean(errorYFiltered);
+    
+    %Mean Position Error
+    meanPositionError = sqrt(meanErrorX.^2 + meanErrorY.^2);
+    meanPositionErrorFiltered = sqrt(meanErrorXFiltered.^2 + meanErrorYFiltered.^2);
     
     %Distance Error between measured position and true position
     distanceError = sqrt(errorX.^2 + errorY.^2);
     distanceErrorFiltered = sqrt(errorXFiltered.^2 + errorYFiltered.^2);
 
     %Mean Error in distance and orientation
-    meanError = sum(distanceError)/length(distanceError);
-    meanErrorFiltered = sum(distanceErrorFiltered)/length(distanceErrorFiltered);
-    meanOrientError = sum(errorOrient)/length(errorOrient);
-    meanOrientErrorFiltered = sum(errorOrientFiltered)/length(errorOrientFiltered);
+    meanDistanceError = mean(distanceError);
+    meanDistanceErrorFiltered = mean(distanceErrorFiltered);
+    meanOrientError = mean(absoluteErrorOrient);
+    meanOrientErrorFiltered = mean(absoluteErrorOrientFiltered);
     
     %Standard Deviation in X/Y direction
     positionSTDX = sqrt(sum((posFrontTag(:,1)-meanX).^2)/(length(posFrontTag(:,1))-1));
@@ -71,24 +81,34 @@ function analysisStationaryDualTag(measurements,truePos,trueOrientation,anchorPo
     positionSTDYFiltered =sqrt(sum((posFrontTagFiltered(:,2)-meanYFiltered).^2)/(length(posFrontTagFiltered(:,2))-1));
 
     %Standard Deviation in distance
-    distanceSTD = sqrt(positionSTDX.^2 + positionSTDY.^2);
-    distanceSTDFiltered = sqrt(positionSTDXFiltered.^2 + positionSTDYFiltered.^2);
+    positionSTD = sqrt(positionSTDX.^2 + positionSTDY.^2);
+    positionSTDFiltered = sqrt(positionSTDXFiltered.^2 + positionSTDYFiltered.^2);
 
     %Standard Deviation in Orientation
     orientSTD = sqrt(sum((orientation-meanOrient).^2)/(length(orientation)-1));
     orientSTDFiltered = sqrt(sum((orientationFiltered-meanOrientFiltered).^2)/(length(orientationFiltered)-1));
     
-    %%Table of values
-    ColumnNames = {'Mean Error';'STD X';'STD Y';'STD Distance';'Mean Orient. Error'; 'STD Orient.'};
-    Method = {'Unfiltered';'Filtered'};
-    Mean_Error =[meanError;meanErrorFiltered];
-    STDx = [positionSTDX;positionSTDXFiltered];
-    STDy = [positionSTDY;positionSTDYFiltered];
-    STD = [distanceSTD;distanceSTDFiltered];
-    Mean_Orient = [meanOrientError;meanOrientErrorFiltered];
-    STD_Orient = [orientSTD;orientSTDFiltered];
+    %MSE Distance
+    pathMSE = sum(distanceError.^2)/length(distanceError);
+    pathMSEFiltered = sum(distanceErrorFiltered.^2)/length(distanceErrorFiltered);
     
-    T = table(Mean_Error,STDx,STDy,STD,Mean_Orient,STD_Orient,'RowNames',Method);
+    %MSE Orientation
+    orientMSE = sum(orientationError.^2)/length(orientationError);
+    orientMSEFiltered = sum(orientationErrorFiltered.^2)/length(orientationErrorFiltered);
+    
+    %%Table of values
+    ColumnNames = {'Mean Distance Error';'Mean Position Error';'STD Position';'MSE Distance';'Absolute Mean Orient. Error';'MSE Orient.'};
+    Method = {'Unfiltered';'Filtered'};
+    Mean_Distance_Error =[meanDistanceError;meanDistanceErrorFiltered];
+    Mean_Position_Error =[meanPositionError;meanPositionErrorFiltered];
+    STD = [positionSTD;positionSTDFiltered];
+    MSE = [pathMSE;pathMSEFiltered];
+    MSEOrient = [orientMSE;orientMSEFiltered];
+    Abolute_Mean_Orient = [meanOrientError;meanOrientErrorFiltered];
+    
+    %STD_Orient = [orientSTD;orientSTDFiltered];
+    
+    T = table(Mean_Distance_Error,Mean_Position_Error,STD,MSE,Abolute_Mean_Orient,MSEOrient,'RowNames',Method);
 
     uitable('Data',T{:,:},'ColumnName',ColumnNames,...
         'RowName',T.Properties.RowNames,'Units', 'Normalized', 'Position',[0, 0, 1, 1],...

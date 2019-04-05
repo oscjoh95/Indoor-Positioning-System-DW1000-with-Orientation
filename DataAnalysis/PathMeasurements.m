@@ -3,18 +3,11 @@
 %Lucas Wassénius
 %Oscar Johansson
 %
-%Script for data analysis in positioning
+%Script to run the data analysis with True Path and True timestamps
+%
 %%
 clear;
 close all;
-%{
-MyGUI = measurementGUI();
-goFlag=0;
-while(goFlag == 0)
-    if(event.Source == MyGUI.GOButton)
-    end
-end
-%}
 
 filename = 'test';
 delimiterIn = ' ';
@@ -64,17 +57,18 @@ y1f = sin(theta+pi/2)+3;
 
 
 %True Path[X,Y,0]
-origin = [1,3,0];
-firstLine = [2,3,0];
+origin = [2.3,2,0];
+point1 = [4.3,2,0];
+point2 = [0,0,0];
+point3 = [0,0,0];
 
-truePath = [origin; firstLine;[3,5,0]];
-trueTimes = linspace(1,10,length(truePath(:,1))*2-2)';
+truePath = [origin; point1;];
+trueTimes = [0; 1.786];
 
 trueStationary = [5, 4, 0];
 trueOrient     = 1;
 
 %analysisStationaryDualTag(measurements,trueStationary,trueOrient,anchorPos);
-%analysisPathDualTag(measurements,truePath,anchorPos);
 analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes);
 
 
