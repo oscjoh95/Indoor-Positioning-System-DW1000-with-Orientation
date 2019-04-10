@@ -12,8 +12,9 @@ function oriError = find_orientation_error(orientation,trueOrientation, times, t
         [index,turnFlag] = find_time_index(times(i),trueTimes);
         if(turnFlag == 0)
             %oriWithoutTurns(counter) = orientation(i);
-            oriError(counter) =trueOrientation(index-1)-orientation(i);
+            oriError(counter) = trueOrientation(index-1)-orientation(i);
             counter = counter+1;
         end
     end 
+    oriError = min_orient_error(oriError')';
 end

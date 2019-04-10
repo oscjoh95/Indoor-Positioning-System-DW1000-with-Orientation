@@ -6,7 +6,7 @@
 %Script for data analysis in positioning
 %%
 
-function analysisStationaryDualTag(measurements,truePos,trueOrientation,anchorPos)
+function analysisStationaryDualTag(measurements,truePos,trueOrientation,radians,anchorPos)
 
     %Store first row as true position
     trueX = truePos(1);
@@ -31,28 +31,37 @@ function analysisStationaryDualTag(measurements,truePos,trueOrientation,anchorPo
     end
 
     %Orientation
-    trueOrientationVec = trueOrientation.*ones(1,length(cumTime));
+    trueOrientationVec = wrapToPi(linspace(trueOrientation, trueOrientation+radians, length(cumTime)));
     
     orientation = atan2((posFrontTag(:,2)-posBackTag(:,2)),(posFrontTag(:,1)-posBackTag(:,1)));
     orientationFiltered = atan2((posFrontTagFiltered(:,2)-posBackTagFiltered(:,2)),(posFrontTagFiltered(:,1)-posBackTagFiltered(:,1)));
     
     %% Mean Error
-
+    
+    %Measured middle position of the robot
+    middlePos = (posFrontTag+posBackTag)./2;
+    middlePosFiltered = (posFrontTagFiltered+posBackTagFiltered)./2;
+    
     %Calculate mean positions
-    meanX = mean(posFrontTag(:,1));
-    meanY = mean(posFrontTag(:,2));
-    meanXFiltered = mean(posFrontTagFiltered(:,1));
-    meanYFiltered = mean(posFrontTagFiltered(:,2));
+    meanX = mean(middlePos(:,1));
+    meanY = mean(middlePos(:,2));
+    meanXFiltered = mean(middlePosFiltered(:,1));
+    meanYFiltered = mean(middlePosFiltered(:,2));
+    
     meanOrient = mean(orientation);
     meanOrientFiltered = mean (orientationFiltered);
 
     %Errors between measured position and true position(and true orientation and calculated orientation)
-    errorX = trueX - posFrontTag(:,1);
-    errorY = trueY - posFrontTag(:,2);
-    errorXFiltered = trueX - posFrontTagFiltered(:,1);
-    errorYFiltered = trueY - posFrontTagFiltered(:,2);
-    absoluteErrorOrient = abs(trueOrientation - orientation);
-    absoluteErrorOrientFiltered = abs(trueOrientation - orientationFiltered);
+    errorX = trueX - middlePos(:,1);
+    errorY = trueY - middlePos(:,2);
+    errorXFiltered = trueX - middlePosFiltered(:,1);
+    errorYFiltered = trueY - middlePosFiltered(:,2);
+    
+    errorOrient0 = trueOrientation - orientation;
+    errorOrient = min_orient_error(errorOrient0);
+    
+    errorOrientFiltered0 = trueOrientation - orientationFiltered;
+    errorOrientFiltered = min_orient_error(errorOrientFiltered0);
     
     %Mean Errors X,Y
     meanErrorX = mean(errorX);
@@ -71,44 +80,43 @@ function analysisStationaryDualTag(measurements,truePos,trueOrientation,anchorPo
     %Mean Error in distance and orientation
     meanDistanceError = mean(distanceError);
     meanDistanceErrorFiltered = mean(distanceErrorFiltered);
-    meanOrientError = mean(absoluteErrorOrient);
-    meanOrientErrorFiltered = mean(absoluteErrorOrientFiltered);
     
-    %Standard Deviation in X/Y direction
-    positionSTDX = sqrt(sum((posFrontTag(:,1)-meanX).^2)/(length(posFrontTag(:,1))-1));
-    positionSTDY = sqrt(sum((posFrontTag(:,2)-meanY).^2)/(length(posFrontTag(:,2))-1));
-    positionSTDXFiltered =sqrt(sum((posFrontTagFiltered(:,1)-meanXFiltered).^2)/(length(posFrontTagFiltered(:,1))-1));
-    positionSTDYFiltered =sqrt(sum((posFrontTagFiltered(:,2)-meanYFiltered).^2)/(length(posFrontTagFiltered(:,2))-1));
+    meanOrientError = mean(errorOrient);
+    meanOrientErrorFiltered = mean(errorOrientFiltered);
+    
+    %Eucledian distance of Standard Deviation
+    positionSTD_Dist =  sqrt((middlePos(:,1)-meanX).^2 + (middlePos(:,2)-meanY).^2);
+    positionSTD_DistFiltered = sqrt((middlePosFiltered(:,1)-meanXFiltered).^2 + (middlePosFiltered(:,2)-meanYFiltered).^2);
+    
 
     %Standard Deviation in distance
-    positionSTD = sqrt(positionSTDX.^2 + positionSTDY.^2);
-    positionSTDFiltered = sqrt(positionSTDXFiltered.^2 + positionSTDYFiltered.^2);
+    positionSTD = sqrt(sum(positionSTD_Dist.^2)/(length(positionSTD_Dist(:,1))-1));
+    positionSTDFiltered = sqrt(sum(positionSTD_DistFiltered.^2)/(length(positionSTD_DistFiltered(:,1))-1));
 
     %Standard Deviation in Orientation
-    orientSTD = sqrt(sum((orientation-meanOrient).^2)/(length(orientation)-1));
-    orientSTDFiltered = sqrt(sum((orientationFiltered-meanOrientFiltered).^2)/(length(orientationFiltered)-1));
+    orientSTD = sqrt(sum((errorOrient-meanOrientError).^2)/(length(errorOrient)-1));
+    orientSTDFiltered = sqrt(sum((errorOrientFiltered-meanOrientErrorFiltered).^2)/(length(errorOrientFiltered)-1));
     
     %MSE Distance
     pathMSE = sum(distanceError.^2)/length(distanceError);
     pathMSEFiltered = sum(distanceErrorFiltered.^2)/length(distanceErrorFiltered);
     
     %MSE Orientation
-    orientMSE = sum(orientationError.^2)/length(orientationError);
-    orientMSEFiltered = sum(orientationErrorFiltered.^2)/length(orientationErrorFiltered);
+    %orientMSE = sum(absoluteErrorOrient.^2)/length(absoluteErrorOrient);
+    %orientMSEFiltered = sum(absoluteErrorOrientFiltered.^2)/length(absoluteErrorOrientFiltered);
     
-    %%Table of values
-    ColumnNames = {'Mean Distance Error';'Mean Position Error';'STD Position';'MSE Distance';'Absolute Mean Orient. Error';'MSE Orient.'};
+    %% Table of values
+    ColumnNames = {'Mean Position Error';'STD Position';'Mean Orient. Error';'STD Orient.'};
     Method = {'Unfiltered';'Filtered'};
     Mean_Distance_Error =[meanDistanceError;meanDistanceErrorFiltered];
     Mean_Position_Error =[meanPositionError;meanPositionErrorFiltered];
     STD = [positionSTD;positionSTDFiltered];
     MSE = [pathMSE;pathMSEFiltered];
-    MSEOrient = [orientMSE;orientMSEFiltered];
+    %MSEOrient = [orientMSE;orientMSEFiltered];
     Abolute_Mean_Orient = [meanOrientError;meanOrientErrorFiltered];
+    STD_Orient = [orientSTD;orientSTDFiltered];
     
-    %STD_Orient = [orientSTD;orientSTDFiltered];
-    
-    T = table(Mean_Distance_Error,Mean_Position_Error,STD,MSE,Abolute_Mean_Orient,MSEOrient,'RowNames',Method);
+    T = table(Mean_Position_Error,STD,Abolute_Mean_Orient,STD_Orient,'RowNames',Method);
 
     uitable('Data',T{:,:},'ColumnName',ColumnNames,...
         'RowName',T.Properties.RowNames,'Units', 'Normalized', 'Position',[0, 0, 1, 1],...
@@ -118,22 +126,30 @@ function analysisStationaryDualTag(measurements,truePos,trueOrientation,anchorPo
 
     set(gcf, 'Position',  [200, 1000, 600, 200])
 
-     %%  Plotting Orientation
+    %%  Plotting Orientation
      
-     orientationFig = figure();
-     hold on;
-     plot(cumTime,orientation,'color',[0 0 1])
-     plot(cumTime,orientationFiltered,'color',[1 102/255 0])
-     plot(cumTime,trueOrientationVec,'black')
-     legend('Orientation ','Filtered Orientation','True Orientation');
-     set(orientationFig, 'Position',  [200, 200, 600, 500]);
-     set(orientationFig, 'Color',  [102/255 204/255 255/255], 'name', 'Orientation Plot');
+    orientationFig = figure();
+    hold on;
+    
+    orientPlot = scatter(cumTime,orientation);
+    orientFilterPlot = scatter(cumTime,orientationFiltered);
+    plot(cumTime,trueOrientationVec,'black')
+    
+    orientPlot.MarkerFaceColor = [0 0 1];
+    orientPlot.MarkerEdgeColor = [0 0 1];
+   
+    orientFilterPlot.MarkerFaceColor = [1 102/255 0];
+    orientFilterPlot.MarkerEdgeColor = [1 102/255 0];
      
-     axis([-0.5 max(cumTime)+0.5 -pi-0.5 pi+0.5]);
-     xlabel('Time[s]');
-     ylabel('Orientation[rad]');
-     yticks([-pi -pi/2 0 pi/2 pi]);
-     yticklabels({'-\pi',join(['-\pi','/2']),'0',join(['\pi','/2']),'\pi'})
+    legend('Orientation ','Filtered Orientation','True Orientation');
+    set(orientationFig, 'Position',  [200, 200, 600, 500]);
+    set(orientationFig, 'Color',  [102/255 204/255 255/255], 'name', 'Orientation Plot');
+     
+    axis([-0.5 max(cumTime)+0.5 -pi-0.5 pi+0.5]);
+    xlabel('Time[s]');
+    ylabel('Orientation[rad]');
+    yticks([-pi -pi/2 0 pi/2 pi]);
+    yticklabels({'-\pi',join(['-\pi','/2']),'0',join(['\pi','/2']),'\pi'})
      
      
   %%  Plotting the stationary data

@@ -33,12 +33,16 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     orientation = atan2((posFrontTag(:,2)-posBackTag(:,2)),(posFrontTag(:,1)-posBackTag(:,1)));
     orientationFiltered = atan2((posFrontTagFiltered(:,2)-posBackTagFiltered(:,2)),(posFrontTagFiltered(:,1)-posBackTagFiltered(:,1)));
 
+    %Measured middle of Robot
+    middlePos = (posFrontTag+posBackTag)./2;
+    middlePosFiltered = (posFrontTagFiltered+posBackTagFiltered)./2;
+    
     %% Table of Error Measurements
     %Errors between measured position and true path
     loopCounter = 1;
     timeCounter = 1;
     while timeCounter <(length(measurements(:,1)))
-        tempPos = [posFrontTag(timeCounter,1),posFrontTag(timeCounter,2),0];
+        tempPos = [middlePos(timeCounter,1),middlePos(timeCounter,2),0];
         [tempDist, tempErrorX, tempErrorY] = min_distance_to_time(tempPos, truePath, cumTime(timeCounter), trueTimes);
         timeCounter=timeCounter+1;
         if tempDist >= 0
@@ -53,7 +57,7 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     loopCounter = 1;
     timeCounter = 1;
     while timeCounter <(length(measurements(:,1)))
-        tempPos = [posFrontTagFiltered(timeCounter,1),posFrontTagFiltered(timeCounter,2),0];
+        tempPos = [middlePosFiltered(timeCounter,1),middlePosFiltered(timeCounter,2),0];
         [tempDist, tempErrorX, tempErrorY] = min_distance_to_time(tempPos, truePath, cumTime(timeCounter), trueTimes);
         timeCounter=timeCounter+1;
         if tempDist >= 0
@@ -70,9 +74,9 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     meanErrorXFiltered = mean(errorXFiltered);
     meanErrorYFiltered = mean(errorYFiltered);
     
-    %Error between calculated orientation and true orientation
-    orientationError = find_orientation_error(orientation,trueOrientation, cumTime, trueTimes);
-    orientationErrorFiltered = find_orientation_error(orientationFiltered,trueOrientation, cumTime, trueTimes);
+    %Error between calculated orientation and true orientation(Absolute)
+    orientationAbsoluteError = find_orientation_error(orientation,trueOrientation, cumTime, trueTimes);
+    orientationAbsoluteErrorFiltered = find_orientation_error(orientationFiltered,trueOrientation, cumTime, trueTimes);
     
     %Mean Error in distance
     meanPositionError = sqrt(meanErrorX^2+meanErrorY^2);
@@ -83,8 +87,8 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     meanDistanceFiltered = mean(distanceErrorFiltered);
     
     %Mean Error in Orientation
-    absoluteMeanOrientError = mean(abs(orientationError));
-    absoluteMeanOrientErrorFiltered = mean(abs(orientationErrorFiltered));
+    absoluteMeanOrientError = mean(abs(orientationAbsoluteError));
+    absoluteMeanOrientErrorFiltered = mean(abs(orientationAbsoluteErrorFiltered));
 
     %STD in distance from mean error
     pathSTD = sqrt(sum((distanceError-meanPositionError).^2)/(length(distanceError)-1));
@@ -99,12 +103,11 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     pathMSEFiltered = sum(distanceErrorFiltered.^2)/length(distanceErrorFiltered);
     
     %MSE Orientation
-    orientMSE = sum(orientationError.^2)/length(orientationError);
-    orientMSEFiltered = sum(orientationErrorFiltered.^2)/length(orientationErrorFiltered);
+    orientMSE = sum(orientationAbsoluteError.^2)/length(orientationAbsoluteError);
+    orientMSEFiltered = sum(orientationAbsoluteErrorFiltered.^2)/length(orientationAbsoluteErrorFiltered);
     
-    
-    %%Table of values
-    ColumnNames = {'Mean Distance Error';'Mean Position Error';'STD Position';'MSE Distance';'Absolute Mean Orient. Error'; 'MSE Orientation'};
+    %% Table of values
+    ColumnNames = {'Mean Distance Error';'MSE Distance';'Absolute Mean Orient. Error'};
     Method = {'Unfiltered';'Filtered'};
     Mean_Distance_Error =[meanDistanceError;meanDistanceFiltered];
     Mean_Position_Error =[meanPositionError;meanPositionErrorFiltered];
@@ -114,7 +117,7 @@ function analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes
     Absolute_Mean_Orient = [absoluteMeanOrientError;absoluteMeanOrientErrorFiltered];
     %STD_Orient = [pathOrientSTD;pathOrientSTDFiltered];
 
-    T = table(Mean_Distance_Error,Mean_Position_Error,STD,MSE,Absolute_Mean_Orient,MSEOrient,'RowNames',Method);
+    T = table(Mean_Distance_Error,MSE,Absolute_Mean_Orient,'RowNames',Method);
 
     uitable('Data',T{:,:},'ColumnName',ColumnNames,...
         'RowName',T.Properties.RowNames,'Units', 'Normalized', 'Position',[0, 0, 1, 1],...

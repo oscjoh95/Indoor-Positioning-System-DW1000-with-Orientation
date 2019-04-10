@@ -57,8 +57,8 @@ y1f = sin(theta+pi/2)+3;
 
 
 %True Path[X,Y,0]
-origin = [2.3,2,0];
-point1 = [4.3,2,0];
+origin = [2.15,2,0];
+point1 = [4.15,2,0];
 point2 = [0,0,0];
 point3 = [0,0,0];
 
@@ -66,9 +66,10 @@ truePath = [origin; point1;];
 trueTimes = [0; 1.786];
 
 trueStationary = [5, 4, 0];
-trueOrient     = 1;
+trueOrient     = -pi;
+radians        = 0;
 
-%analysisStationaryDualTag(measurements,trueStationary,trueOrient,anchorPos);
+%analysisStationaryDualTag(measurements,trueStationary,trueOrient,radians,anchorPos);
 analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes);
 
 
