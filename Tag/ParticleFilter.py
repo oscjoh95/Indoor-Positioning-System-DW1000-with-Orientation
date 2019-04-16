@@ -19,7 +19,7 @@ class ParticleFilter():
         #Tuning parameters
         self.velocitystd = vstd#0.13 
         self.headingstd = hstd#0.29 
-        self.measImp = 0.6#sigma*1.5
+        self.measImp = sigma
         self.N = N
         self.xDim = xDim
         self.yDim = yDim
@@ -42,10 +42,10 @@ class ParticleFilter():
         """
         Predicts the position, speed and heading of the particles
         """
-        self.particles[:,3] += np.random.normal(0, self.headingstd, self.N)
         self.particles[:,2] += np.random.normal(0, self.velocitystd, self.N)
-        self.particles[:,1] += self.particles[:,2]*np.sin(self.particles[:,3])
-        self.particles[:,0] += self.particles[:,2]*np.cos(self.particles[:,3])
+        self.particles[:,3] += np.random.normal(0, self.headingstd, self.N)
+        self.particles[:,1] += self.particles[:,2]*np.sin(self.particles[:,3])*self.particles[:,2]*dt
+        self.particles[:,0] += self.particles[:,2]*np.cos(self.particles[:,3])*self.particles[:,2]*dt
         
     def update(self, z):
         """
@@ -62,9 +62,9 @@ class ParticleFilter():
         
         maxIndex = np.argmax(self.weights)
         
-        #plt.plot(self.particles[:,0],self.particles[:,1], 'b.', markersize = 0.5)
+        plt.plot(self.particles[:,0],self.particles[:,1], 'b.', markersize = 0.5)
         #plt.plot(x,y,'gx')
-        
+        #plt.pause(0.1)
         return x,y
     
     def estimate(self):
@@ -76,6 +76,9 @@ class ParticleFilter():
         estposy = 0
         estposx = sum(self.weights*self.particles[:,0])
         estposy = sum(self.weights*self.particles[:,1])
+        
+        #plt.plot(estposx,estposy,'gx')
+        #plt.pause(0.1)
         
         return(estposx,estposy)
         

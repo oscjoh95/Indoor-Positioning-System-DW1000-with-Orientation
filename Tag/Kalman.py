@@ -61,7 +61,7 @@ class KalmanFilter():
         self.x = self.x + K.dot(y)
         self.P = (np.identity(4) - K.dot(self.H)).dot(self.P).dot((np.identity(4) - K.dot(self.H)).T) + K.dot(self.R).dot(K.T)
         
-        return self.x[0],self.x[1]
+        return (self.x[0].item(0),self.x[1].item(0))
     
     def adjustMatrices(self, dt):
         """
