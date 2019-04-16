@@ -1,6 +1,6 @@
 //Pin Numbers
 #define S1_A        12
-#define S2_A        18
+#define S2_A        2
 #define S1_B        11
 #define S2_B        19
 #define PWM_A       3
@@ -19,18 +19,20 @@
 #define RUN_BUTTON  34
 
 //Movement constants
-#define FORWARD   0
-#define BACKWARD  1
-#define SPIN_CW   2
-#define SPIN_CCW  3
+#define BACKWARD  0
+#define FORWARD   1
+#define SPIN_CW  2
+#define SPIN_CCW   3
 
-#define SLOW        204 //~80 % duty cycle
-#define MEDIUM      230 //~90 % duty cycle
-#define FAST        255 //~100 % duty cycle
+
+#define SLOW        204 //~80 % duty cycle  5.76 V
+#define MEDIUM      230 //~90 % duty cycle  6.49 V
+#define FAST        255 //~100 % duty cycle 7.20 V
 
 //Other Constants
 #define ROBOT_WIDTH   19  //In cm
-#define TURNING_COEFF 1
+#define TURNING_COEFF 1.955
+#define DRIVING_COEFF 1.09
 
 int newReadingA = 0;
 int oldReadingA;
@@ -41,8 +43,8 @@ int dirA = 0;
 int dirB = 0;
 double distanceA = 0;
 double distanceB = 0;
-unsigned long counterA;
-unsigned long counterB;
+volatile unsigned long counterA;
+volatile unsigned long counterB;
 int program  = 1;
 boolean runProgram = false;
 
@@ -114,14 +116,25 @@ void loop() {
       case 1:
         //Program path 1 here
         Serial.println("Running Path 1");
+        spin(4*PI, SPIN_CCW);
         break;
       case 2:
         //Program path 2 here
         Serial.println("Running Path 2");
+        drive(300, FORWARD);
         break;
       case 3:
         //Program path 3 here
         Serial.println("Running Path 3");
+        drive(300, FORWARD);
+        delay(50);
+        spin(PI/2, SPIN_CW);
+        delay(50);
+        drive(300, FORWARD);
+        delay(50);
+        spin(PI/2, SPIN_CW);
+        delay(50);
+        drive(300, FORWARD);
         break;
       default:
         Serial.println("Error: Invalid program");
@@ -135,7 +148,7 @@ void loop() {
   delay(1000);
   spin(PI/2, SPIN_CW)
   delay(1000);
-  moveForward(100, BACKWARD);
+  drive(100, BACKWARD);
   */
 }
 
@@ -143,7 +156,8 @@ void loop() {
 void drive(double distance, int moveDirection){
   if(distance > 0){
     counterA = 0;
-    motorsOn(moveDirection, MEDIUM); //Turn on motors
+    distance = distance*DRIVING_COEFF;
+    motorsOn(moveDirection, 100); //Turn on motors
     while(getPositionA() < distance){
       //Do nothing until distance has been travelled
     }
@@ -159,7 +173,7 @@ void spin(double theta, int spinDirection){
   if(theta > 0){
     double endDistance = radiansToDistance(theta);
     counterA = 0;
-    motorsOn(spinDirection, MEDIUM); //Turn on motors
+    motorsOn(spinDirection, 100); //Turn on motors
     while(getPositionA() < endDistance){
       //Do nothing until spin has finished
     }
@@ -173,7 +187,7 @@ void spin(double theta, int spinDirection){
 //Function to start the motors to go in a given direction with speed pwmSpeed
 void motorsOn(int movement, int pwmSpeed){
   switch(movement){
-    case FORWARD:
+    case BACKWARD:
       digitalWrite(DIR_A0, HIGH);
       digitalWrite(DIR_A1, LOW);
       digitalWrite(DIR_B0, LOW);
@@ -182,7 +196,7 @@ void motorsOn(int movement, int pwmSpeed){
       analogWrite(PWM_A, pwmSpeed);
       analogWrite(PWM_B, pwmSpeed);
       break;
-    case BACKWARD:
+    case FORWARD:
       digitalWrite(DIR_A0, LOW);
       digitalWrite(DIR_A1, HIGH);
       digitalWrite(DIR_B0, HIGH);
@@ -191,7 +205,7 @@ void motorsOn(int movement, int pwmSpeed){
       analogWrite(PWM_A, pwmSpeed);
       analogWrite(PWM_B, pwmSpeed);
       break;
-    case SPIN_CW:
+    case SPIN_CCW:
       digitalWrite(DIR_A0, LOW);
       digitalWrite(DIR_A1, HIGH);
       digitalWrite(DIR_B0, LOW);
@@ -200,7 +214,7 @@ void motorsOn(int movement, int pwmSpeed){
       analogWrite(PWM_A, pwmSpeed);
       analogWrite(PWM_B, pwmSpeed);
       break;
-    case SPIN_CCW:
+    case SPIN_CW:
       digitalWrite(DIR_A0, HIGH);
       digitalWrite(DIR_A1, LOW);
       digitalWrite(DIR_B0, HIGH);
@@ -214,13 +228,13 @@ void motorsOn(int movement, int pwmSpeed){
   }
 }
 
-//Function to break the motors for 10 ms and then stop
+//Function to break for 10 ms and then stop
 void motorsOff(){
   //Break
   analogWrite(PWM_A, LOW);
   analogWrite(PWM_B, LOW);
-  delay(10);
-  
+  delay(100);
+   
   //Turn off
   digitalWrite(DIR_A0, LOW);
   digitalWrite(DIR_A1, LOW);
