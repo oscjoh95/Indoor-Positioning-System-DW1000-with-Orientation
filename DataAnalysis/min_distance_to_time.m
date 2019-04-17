@@ -5,6 +5,8 @@
 
 function [distanceError, errorX,errorY] = min_distance_to_time(pt,truePath, time, trueTimes)
     [index,turnFlag] = find_time_index(time,trueTimes);
+    errorX = 1000;
+    errorY = 1000;
     if(turnFlag==0)
         deltaT = trueTimes(index*2-2)-trueTimes(index*2-3);
         timeFactor = ((time-trueTimes(index*2-3))/deltaT);
