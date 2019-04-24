@@ -54,7 +54,7 @@ volatile byte recDevId;   //Received Device ID
 volatile byte sentMsgId;  //Sent Message ID
 
 //Calibration of antenna
-uint32_t ANTENNA_DELAY = 16300;//Delay to calibrate antenna. Typ. 16470
+uint32_t ANTENNA_DELAY = 16400;//Delay to calibrate antenna. Typ. 16470
 
 //Received Interrupts
 volatile boolean sentAck = false;
