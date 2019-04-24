@@ -25,8 +25,8 @@
 #define SPIN_CCW   3
 
 
-#define SLOW        204 //~80 % duty cycle  5.76 V
-#define MEDIUM      230 //~90 % duty cycle  6.49 V
+#define SLOW        100 //~80 % duty cycle  5.76 V
+#define MEDIUM      180 //~90 % duty cycle  6.49 V
 #define FAST        255 //~100 % duty cycle 7.20 V
 
 //Other Constants
@@ -157,7 +157,7 @@ void drive(double distance, int moveDirection){
   if(distance > 0){
     counterA = 0;
     distance = distance*DRIVING_COEFF;
-    motorsOn(moveDirection, 100); //Turn on motors
+    motorsOn(moveDirection, SLOW); //Turn on motors
     while(getPositionA() < distance){
       //Do nothing until distance has been travelled
     }
@@ -173,7 +173,7 @@ void spin(double theta, int spinDirection){
   if(theta > 0){
     double endDistance = radiansToDistance(theta);
     counterA = 0;
-    motorsOn(spinDirection, 100); //Turn on motors
+    motorsOn(spinDirection, SLOW); //Turn on motors
     while(getPositionA() < endDistance){
       //Do nothing until spin has finished
     }

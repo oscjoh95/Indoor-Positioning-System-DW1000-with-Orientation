@@ -20,8 +20,8 @@ CS1 = 12
 CS2 = 5
 IRQ1 = 6
 IRQ2 = 26
-ANTENNA_DELAY1 = 16368
-ANTENNA_DELAY2 = 16368
+ANTENNA_DELAY1 = 16300
+ANTENNA_DELAY2 = 16294
 ANCHOR1 = (0,0)  #Adjust when anchors placed
 ANCHOR2 = (10,0) #Adjust when anchors placed
 ANCHOR3 = (5,10) #Adjust when anchors placed
@@ -49,9 +49,9 @@ times = []
 
 #Particle Filter
 anchors = np.array([[ANCHOR1[0], ANCHOR1[1]],[ANCHOR2[0], ANCHOR2[1]],[ANCHOR3[0], ANCHOR3[1]]])
-sigma = 0.9
-vstd = 0.1
-hstd = 0.2
+sigma = 0.15
+vstd = 0.9
+hstd = 0.6
 
 #Kalman Filter
 xInit1 = 0
