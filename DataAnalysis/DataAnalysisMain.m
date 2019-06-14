@@ -3,26 +3,20 @@
 %Lucas Wassénius
 %Oscar Johansson
 %
-%Script for data analysis in positioning
+%Script to run the data analysis for different paths and stationary
+%measurements.
+%
 %%
 clear;
 close all;
-%{
-MyGUI = measurementGUI();
-goFlag=0;
-while(goFlag == 0)
-    if(event.Source == MyGUI.GOButton)
-    end
-end
-%}
 
-filename = 'test';
+filename = 'SimPi40';
 delimiterIn = ' ';
 headerlinesIn = 0;
 measurements = importdata(filename, delimiterIn, headerlinesIn);
 
 %Anchor positions[A0, A1, A2]
-anchorPos = [0, 4.37, 1.3 ;  0, 0, 6.9];
+anchorPos = [0, 10, 5 ;  0, 0, 10];
 
 %%Linear Measurements
 %{ 
@@ -53,8 +47,7 @@ y1 = sin(theta)+2;
 
 
 x2f = ones(100,1)*3;
-y2f = ones(100,1)*3;
-
+y2f = ones(100,1)*3;s
 x1f = cos(theta+pi/2)+3;
 y1f = sin(theta+pi/2)+3;
 
@@ -62,19 +55,23 @@ y1f = sin(theta+pi/2)+3;
 
 %measurements = [x1, y1, x2, y2, x1f, y1f, x2f, y2f, times];
 
-
 %True Path[X,Y,0]
-origin = [1,3,0];
-firstLine = [2,3,0];
+origin = [1,1,0];
+point1 = [4,1,0];
 
-truePath = [origin; firstLine;[3,5,0]];
-trueTimes = linspace(1,10,length(truePath(:,1))*2-2)';
+piPoint1 = [1,4,0];
+piPoint2 = [4,4,0];
+piPoint3 = [4,1,0];
 
-trueStationary = [5, 4, 0];
-trueOrient     = 1;
+trueStraightPath = [origin; point1;];
+truePiPath = [origin; piPoint1;piPoint2;piPoint3];
 
-%analysisStationaryDualTag(measurements,trueStationary,trueOrient,anchorPos);
-%analysisPathDualTag(measurements,truePath,anchorPos);
-analysisPathDualTagWithTimers(measurements,truePath,anchorPos,trueTimes);
+trueTimes = [0;4.3;4.79;9;9.5;13.86];
 
+trueStationary = [3, 3, 0];
+trueOrient     = 0;
+radians        = 4*pi;
+
+%analysisStationaryDualTag(measurements,trueStationary,trueOrient,radians,anchorPos);
+analysisPathDualTagWithTimers(measurements,truePiPath,anchorPos,trueTimes);
 
